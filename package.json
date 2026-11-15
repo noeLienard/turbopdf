@@ -88,7 +88,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:tree": "cargo test --manifest-path engine/Cargo.toml -p turbopdf-tree --features ts && cp engine/crates/turbopdf-tree/bindings/tree.ts src/tree.ts",
-    "build:native": "node scripts/build-native.mjs"
+    "build:native": "node scripts/build-native.mjs",
+    "bench": "tsx bench/run.ts"
   },
   "peerDependencies": {
     "react": ">=18",

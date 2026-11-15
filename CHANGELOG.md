@@ -61,6 +61,8 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
   being written back into `style` strings. Linked stylesheets and `@font-face` files are read by the engine's
   loader, the same `baseDir` sandbox as images and fonts. `@font-face` accepts `data:` URLs. Semicolons inside
   `url(…)` no longer split a declaration; with two `font-size` declarations the winning one is used.
+- `npm run bench`: reference benchmark through the public API (reports, invoices up to 8,000 rows, Markdown, a
+  framework-size stylesheet), Markdown or JSON output.
 - `pdfua: true`: PDF/UA-1 conformance (validated while writing). Error code `not_accessible`, warning
   `missing_alt`. `title` and `lang` options; Markdown takes its title from the first `# heading`.
 - Warnings `moved_to_next_page`, `missing_glyph`, `stylesheet_failed`, `font_failed`, `broken_link`; warnings
