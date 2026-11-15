@@ -40,6 +40,24 @@ describe('HTML + CSS cascade', () => {
     expect(table).toMatchObject({ rows: [{ cells: [{}] }, { cells: [{ style: { backgroundColor: '#f3f4f6' } }] }] });
   });
 
+  it('a selector list keeps its most specific matching selector, whichever key it is filed under', async () => {
+    const html = `<style>
+      #a, .b, p { color: red }
+      .b { color: blue }
+      p.c, div p { color: green }
+    </style><div><p id="a" class="b c">x</p></div>`;
+    // `#a` (id) beats `.b`, `p.c` and `div p`, even though `.b { blue }` and the green rule come later
+    expect((await toTree({ html })).children[0]!.children[0]).toMatchObject({ children: [{ type: 'text', style: { color: '#ff0000' } }] });
+  });
+
+  it('stays fast with a framework-size stylesheet (rules are indexed, not all tested on every element)', async () => {
+    const css = Array.from({ length: 6000 }, (_, i) => `.u${i} { margin: 1px } div .w${i} > span { padding: 1px }`).join('\n');
+    const rows = Array.from({ length: 500 }, (_, i) => `<tr class="r"><td class="c">${i}</td><td>${i}</td></tr>`).join('');
+    const start = performance.now();
+    await toTree({ html: `<style>${css} .c { font-weight: bold }</style><table>${rows}</table>` });
+    expect(performance.now() - start).toBeLessThan(1500); // without the index: several seconds
+  });
+
   it('resolves inherited CSS variables, fallbacks and nested references', async () => {
     const html = `<style>
       :root { --brand: #2563eb; --space: 8px; --double: calc(var(--space) * 2) }

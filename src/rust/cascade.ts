@@ -49,6 +49,57 @@ export interface Stylesheet {
   fontFaces: FontFaceRule[];
 }
 
+/** A selector filed under the most selective key of its rightmost compound (`#id`, `.class`, `tag` or `*`). */
+interface Entry {
+  rule: Rule;
+  selector: Selector;
+}
+type RuleIndex = Map<string, Entry[]>;
+
+/**
+ * Browsers' rule hash: an element only tests the selectors filed under its id, its classes, its tag and `*`,
+ * instead of every rule of the stylesheet (a Bootstrap-size stylesheet has thousands).
+ */
+const indexes = new WeakMap<Stylesheet, RuleIndex>();
+function indexOf(sheet: Stylesheet): RuleIndex {
+  let index = indexes.get(sheet);
+  if (index) return index;
+  index = new Map();
+  for (const rule of sheet.rules) {
+    for (const selector of rule.selectors) {
+      const last = selector.parts[selector.parts.length - 1]!;
+      const key = last.id !== undefined ? `#${last.id}` : last.classes.length ? `.${last.classes[0]}` : (last.tag ?? '*');
+      let list = index.get(key);
+      if (!list) index.set(key, (list = []));
+      list.push({ rule, selector });
+    }
+  }
+  indexes.set(sheet, index);
+  return index;
+}
+
+const classLists = new WeakMap<El, string[]>();
+function classesOf(el: El): string[] {
+  let list = classLists.get(el);
+  if (!list) {
+    list = (el.attrs.class ?? el.attrs.classname ?? '').split(/\s+/).filter(Boolean);
+    classLists.set(el, list);
+  }
+  return list;
+}
+
+/** Selectors that may match `el`, from the index: each one once, in no particular order. */
+function candidates(el: El, index: RuleIndex): Entry[] {
+  const keys = ['*', el.tag, ...classesOf(el).map((c) => `.${c}`)];
+  if (el.attrs.id) keys.push(`#${el.attrs.id}`);
+  const out: Entry[] = [];
+  for (const key of new Set(keys)) {
+    const list = index.get(key);
+    if (list) for (const e of list) out.push(e);
+  }
+  return out;
+}
+
 /** A stylesheet's text, and the folder its relative `url(…)`s are relative to (`''`: the document's). */
 export type StyleSource = string | { css: string; base: string };
 
@@ -231,7 +282,7 @@ function matchesCompound(c: Compound, x: Ctx): boolean {
   if (c.tag && c.tag !== el.tag) return false;
   if (c.id && el.attrs.id !== c.id) return false;
   if (c.classes.length) {
-    const cls = (el.attrs.class ?? el.attrs.classname ?? '').split(/\s+/);
+    const cls = classesOf(el);
     if (!c.classes.every((k) => cls.includes(k))) return false;
   }
   for (const a of c.attrs) {
@@ -327,18 +378,23 @@ export function applyStylesheet(children: Child[], sheet: Stylesheet, parent?: C
     inheritedVars = new Map(inheritedVars);
     for (const { decl } of roots) inheritedVars.set(decl[0], decl[1]);
   }
+  const index = indexOf(sheet);
   const els = children.filter((c): c is El => typeof c !== 'string');
   els.forEach((el, i) => {
     const ctx: Ctx = { el, index: i + 1, count: els.length, parent };
     type Hit = { decl: [string, string, boolean]; spec: number; order: number };
     const hits: Hit[] = [];
     const generated: Record<'before' | 'after', Hit[]> = { before: [], after: [] };
-    for (const rule of sheet.rules) {
-      for (const kind of [undefined, 'before', 'after'] as const) {
-        let spec = -1;
-        for (const s of rule.selectors) if (s.pseudoElement === kind && s.specificity > spec && matches(s, ctx)) spec = s.specificity;
-        if (spec >= 0) for (const d of rule.declarations) (kind ? generated[kind] : hits).push({ decl: d, spec, order: rule.order });
-      }
+    // per rule and pseudo-element, the highest specificity among its matching selectors
+    const best = new Map<string, { rule: Rule; kind: 'before' | 'after' | undefined; spec: number }>();
+    for (const { rule, selector: s } of candidates(el, index)) {
+      const key = `${rule.order}:${s.pseudoElement ?? ''}`;
+      const seen = best.get(key);
+      if (seen && seen.spec >= s.specificity) continue;
+      if (matches(s, ctx)) best.set(key, { rule, kind: s.pseudoElement, spec: s.specificity });
+    }
+    for (const { rule, kind, spec } of best.values()) {
+      for (const d of rule.declarations) (kind ? generated[kind] : hits).push({ decl: d, spec, order: rule.order });
     }
     if (hits.length) {
       hits.sort((a, b) => a.spec - b.spec || a.order - b.order);
