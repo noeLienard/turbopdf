@@ -15,6 +15,11 @@ pub use rustybuzz::Face as ShapeFace;
 /// Resolves `{ "file": "…" }` sources. Implemented by the Node binding; absent in WebAssembly.
 pub trait ResourceLoader: Send + Sync {
     fn load(&self, path: &str) -> Result<Vec<u8>, String>;
+
+    /// Bytes handed over next to the tree (`{ "buffer": n }` sources).
+    fn buffer(&self, index: u32) -> Result<Vec<u8>, String> {
+        Err(format!("no buffer {index} was passed with the document"))
+    }
 }
 
 /// Loader that always fails: the default when the host provides none.

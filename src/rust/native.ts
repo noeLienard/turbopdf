@@ -4,11 +4,20 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TurboPdfError } from '../errors';
 
+/** A document laid out by the engine: PNGs and the HTML preview are drawn from the same layout. */
+export interface NativeDocument {
+  readonly pages: number;
+  /** JSON array of the engine's warnings. */
+  readonly warnings: string;
+  /** The PDF bytes, handed over without a copy: only once. */
+  takePdf(): Buffer;
+  png(scale?: number): Promise<Buffer[]>;
+  html(): Promise<{ style: string; pages: { width: number; height: number; html: string }[] }>;
+}
+
 /** The napi module built from `engine/crates/turbopdf-node`. */
 export interface NativeEngine {
-  render(tree: string, options?: { baseDir?: string }): Promise<{ pdf: Buffer; pages: number; warnings: string }>;
-  preview(tree: string, options?: { baseDir?: string; scale?: number }): Promise<Buffer[]>;
-  previewHtml(tree: string, options?: { baseDir?: string }): Promise<{ style: string; pages: { width: number; height: number; html: string }[] }>;
+  render(tree: string, options?: { baseDir?: string; buffers?: Buffer[] }): Promise<NativeDocument>;
   version(): string;
 }
 
