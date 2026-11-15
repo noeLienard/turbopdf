@@ -23,14 +23,14 @@ repeat. About 20 ms for a 3-page invoice with 200 rows (a headless browser takes
 TurboPDF is a document engine, not a browser automation wrapper or a low-level drawing API. The comparison below
 uses each project's standard workflow; plugins and application-specific integration can extend any of them.
 
-| | **TurboPDF** | [Puppeteer](https://pptr.dev/) | [Playwright](https://playwright.dev/) | [React-pdf](https://react-pdf.org/) | [PDFKit](https://pdfkit.org/) |
+| | **TurboPDF** | [Puppeteer](https://pptr.dev/) | [Playwright](https://playwright.dev/) | [React-pdf](https://react-pdf.org/) | [wkhtmltopdf](https://wkhtmltopdf.org/) |
 |---|---|---|---|---|---|
-| Accepted sources | **HTML, React, Markdown and a typed document tree through one API** | HTML or a live web page | HTML or a live web page | React-pdf components | Drawing API |
-| HTML to PDF without a browser | **Yes — native Rust engine** | No — launches Chrome | No — PDF export uses Chromium | No HTML input | No HTML input |
-| Untrusted document behaviour | **No scripts execute; no network request is made** | Page scripts and requests run unless restricted | Page scripts and requests run unless restricted | No web page; remote assets are application-controlled | No web page; resources are application-controlled |
-| Reproducible output | **Byte-identical PDF for the same input** | Not promised | Not promised | Not promised | Application-dependent |
-| Long document pagination | **Rows stay whole, table headers repeat, keep-together and page references are built in** | Depends on print CSS and Chromium | Depends on print CSS and Chromium | Page wrapping primitives; document logic is explicit | Table and drawing logic is explicit |
-| Accessibility | **Tagged by default; PDF/UA-1 mode validates title, language, alt text and glyph coverage** | Tagged PDF is experimental | Tagged PDF is opt-in | No documented PDF/UA validation | Tagged PDF/PDF-UA are available but structure is authored manually |
+| Accepted sources | **HTML, React, Markdown and a typed document tree through one API** | HTML or a live web page | HTML or a live web page | React-pdf components | HTML or a web page |
+| HTML to PDF without a browser | **Yes — native Rust engine** | No — launches Chrome | No — PDF export uses Chromium | No HTML input | No — embeds an old QtWebKit (no modern Flexbox or Grid) |
+| Untrusted document behaviour | **No scripts execute; no network request is made** | Page scripts and requests run unless restricted | Page scripts and requests run unless restricted | No web page; remote assets are application-controlled | Page scripts and requests run; the project is archived (2023) and gets no security fixes |
+| Reproducible output | **Byte-identical PDF for the same input** | Not promised | Not promised | Not promised | Not promised |
+| Long document pagination | **Rows stay whole, table headers repeat, keep-together and page references are built in** | Depends on print CSS and Chromium | Depends on print CSS and Chromium | Page wrapping primitives; document logic is explicit | Depends on print CSS and QtWebKit |
+| Accessibility | **Tagged by default; PDF/UA-1 mode validates title, language, alt text and glyph coverage** | Tagged PDF is experimental | Tagged PDF is opt-in | No documented PDF/UA validation | No tagged PDF |
 
 ## How it works
 
