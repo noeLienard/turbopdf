@@ -40,14 +40,31 @@ impl ResourceLoader for DirLoader {
                 "{path} is remote: TurboPDF never uses the network. Download it and pass a file path or a data: URL"
             ));
         }
-        let full = base.join(path.trim_start_matches("file://"));
+        let requested = Path::new(path.trim_start_matches("file://"));
+        // lexical check first: `../x` is refused even when it does not exist
+        let mut depth = 0i32;
+        for c in requested.components() {
+            match c {
+                std::path::Component::ParentDir => depth -= 1,
+                std::path::Component::Normal(_) => depth += 1,
+                _ => {}
+            }
+            if depth < 0 {
+                break;
+            }
+        }
+        let outside = || format!("{path:?} is outside baseDir ({})", base.display());
+        let full = base.join(requested);
+        // (absolute paths are only checked once resolved: `/var/…` may be `/private/var/…`)
+        if depth < 0 && !requested.is_absolute() {
+            return Err(outside());
+        }
         let real = full
             .canonicalize()
-            .map_err(|e| format!("cannot read {path:?}: {e}"))?;
+            .map_err(|_| format!("{path:?} was not found in baseDir ({})", base.display()))?;
+        // symbolic links are followed: the file itself must be inside too
         if !real.starts_with(base) {
-            return Err(format!(
-                "{path:?} is outside the allowed directory {base:?}"
-            ));
+            return Err(outside());
         }
         std::fs::read(&real).map_err(|e| format!("cannot read {path:?}: {e}"))
     }
@@ -286,6 +303,93 @@ impl Task for HtmlTask {
 
 fn round2(v: f32) -> f64 {
     (v as f64 * 100.0).round() / 100.0
+}
+
+#[napi(object)]
+pub struct ConvertOptions {
+    /// Directory that linked stylesheets and `@font-face` files are read from (never outside it).
+    pub base_dir: Option<String>,
+    pub css: Option<String>,
+    pub header: Option<String>,
+    pub footer: Option<String>,
+}
+
+#[napi(object)]
+pub struct ConvertResult {
+    /// JSON: `{ meta, pages, header, footer, page, fonts, warnings }`.
+    pub parts: String,
+    /// Bytes of the `@font-face` fonts, referenced as `{ "buffer": n }`.
+    pub buffers: Vec<Buffer>,
+}
+
+pub struct ConvertTask {
+    html: String,
+    options: ConvertOptions,
+}
+
+impl Task for ConvertTask {
+    type Output = (String, Vec<Vec<u8>>);
+    type JsValue = ConvertResult;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        let base = self
+            .options
+            .base_dir
+            .as_deref()
+            .map(|dir| {
+                Path::new(dir)
+                    .canonicalize()
+                    .map_err(|e| fail("invalid_option", format!("baseDir {dir:?}: {e}"), None))
+            })
+            .transpose()?;
+        let loader = DirLoader {
+            base,
+            buffers: Vec::new(),
+        };
+        let input = turbopdf_markup::Input {
+            html: &self.html,
+            css: self.options.css.as_deref(),
+            header: self.options.header.as_deref(),
+            footer: self.options.footer.as_deref(),
+        };
+        let mut out = turbopdf_markup::convert(&input, &loader)
+            .map_err(|e| fail("invalid_tree", e.to_string(), None))?;
+        let buffers = std::mem::take(&mut out.buffers);
+        Ok((
+            serde_json::to_string(&out).expect("parts serialize"),
+            buffers,
+        ))
+    }
+
+    fn resolve(&mut self, _env: Env, (parts, buffers): Self::Output) -> Result<Self::JsValue> {
+        Ok(ConvertResult {
+            parts,
+            buffers: buffers.into_iter().map(Buffer::from).collect(),
+        })
+    }
+}
+
+/// HTML (a page, a fragment, or React's static markup) → the parts of a document tree, with the CSS
+/// cascade applied. HTML5 parsing (html5ever); stylesheets and fonts read inside `baseDir`.
+#[napi]
+pub fn convert_html(html: String, options: Option<ConvertOptions>) -> AsyncTask<ConvertTask> {
+    AsyncTask::new(ConvertTask {
+        html,
+        options: options.unwrap_or(ConvertOptions {
+            base_dir: None,
+            css: None,
+            header: None,
+            footer: None,
+        }),
+    })
+}
+
+/// An HTML fragment (raw HTML in Markdown) → JSON array of tree nodes. Inline styles only, no files.
+#[napi]
+pub fn html_nodes(html: String) -> Result<String> {
+    let nodes =
+        turbopdf_markup::fragment(&html).map_err(|e| fail("invalid_tree", e.to_string(), None))?;
+    Ok(serde_json::to_string(&nodes).expect("nodes serialize"))
 }
 
 /// Version of the engine and of the tree format it reads.

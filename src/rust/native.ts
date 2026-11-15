@@ -18,6 +18,10 @@ export interface NativeDocument {
 /** The napi module built from `engine/crates/turbopdf-node`. */
 export interface NativeEngine {
   render(tree: string, options?: { baseDir?: string; buffers?: Buffer[] }): Promise<NativeDocument>;
+  /** HTML → document parts (JSON), with the CSS cascade; stylesheets and fonts read inside `baseDir`. */
+  convertHtml(html: string, options?: { baseDir?: string; css?: string; header?: string; footer?: string }): Promise<{ parts: string; buffers: Buffer[] }>;
+  /** An HTML fragment → JSON array of tree nodes (inline styles only, no files). */
+  htmlNodes(html: string): string;
   version(): string;
 }
 
@@ -56,7 +60,7 @@ export function nativeError(e: unknown): TurboPdfError {
   const raw = e instanceof Error ? e.message : String(e);
   try {
     const { code, message, details } = JSON.parse(raw) as { code: string; message: string; details?: unknown };
-    const known = code === 'invalid_tree' || code === 'font_failed' || code === 'not_accessible' ? code : 'render_failed';
+    const known = code === 'invalid_tree' || code === 'font_failed' || code === 'not_accessible' || code === 'invalid_option' ? (code === 'invalid_option' ? 'invalid_source' : code) : 'render_failed';
     const err = new TurboPdfError(known, message, { cause: e });
     if (details !== undefined) err.details = details;
     return err;

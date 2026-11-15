@@ -37,7 +37,8 @@ uses each project's standard workflow; plugins and application-specific integrat
 Every source becomes a **document tree** (pages, views, text, images, tables), laid out by the Rust engine
 (flexbox, text shaping, hyphenation, pagination) and written to PDF:
 
-- `html`: parsed, with its CSS applied (see [HTML and CSS](#html-and-css)). Scripts never run.
+- `html`: parsed by the engine with the HTML5 algorithm browsers use (unclosed `<p>`, tables without `<tbody>`
+  and entities behave as in a browser), with its CSS applied (see [HTML and CSS](#html-and-css)). Scripts never run.
 - `react`: rendered to static markup, then handled like HTML. Use the components below for full control.
 - `markdown`: converted directly, styled for print.
 - `tree`: the document tree itself (types in `turbopdf/tree`).

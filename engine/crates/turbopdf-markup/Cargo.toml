@@ -1,0 +1,17 @@
+[package]
+name = "turbopdf-markup"
+description = "HTML + CSS → TurboPDF document tree: HTML5 parsing (html5ever), CSS cascade, inline styles."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+turbopdf-tree.workspace = true
+turbopdf-fonts.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+base64.workspace = true
+html5ever.workspace = true
+
+[dev-dependencies]

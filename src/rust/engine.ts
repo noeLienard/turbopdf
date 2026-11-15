@@ -1,16 +1,12 @@
 // `create()`: source → document tree → native render (Rust engine, no browser, no network).
 import type { HtmlFromEngine } from '../preview';
-import { readFile, realpath } from 'node:fs/promises';
-import { extname, isAbsolute, posix, relative, resolve } from 'node:path';
+import { extname } from 'node:path';
 import { TurboPdfError } from '../errors';
 import { FORMATS, normalizeMargin, toPx } from '../formats';
 import { holdSlotUntil } from '../queue';
-import type { Document, Edges, FontFace, FontStyle, Node, Page, PageSize, Warning as TreeWarning, Watermark } from '../tree';
+import type { Document, Edges, FontFace, Node, Page, PageSize, Warning as TreeWarning, Watermark } from '../tree';
 import type { CreateOptions, Format, ReactElementLike, Warning } from '../types';
-import { applyStylesheet, parseStylesheets, styleElements, stylesheetLinks, type FontFaceRule, type PageRule, type StyleSource, type Stylesheet } from './cascade';
-import { parseCss } from './css';
 import { markdownToNodes } from './markdown';
-import { blocks, pagesOf, parseMarkup, type Child, type El, type PageParts } from './markup';
 import { loadNative, nativeError, type NativeDocument } from './native';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
@@ -20,15 +16,7 @@ export function isReactElement(value: unknown): value is ReactElementLike {
   return typeof value === 'object' && value !== null && '$$typeof' in value;
 }
 
-/** Built-in rules: the page-break utility classes. */
-const UA_CSS = `
-.turbopdf-break-before { break-before: page }
-.turbopdf-break-after { break-after: page }
-.turbopdf-keep-together { break-inside: avoid }
-`;
-
 const pt = (v: string | number) => toPx(v) * 0.75;
-const PAPER: Record<string, Format> = { a3: 'A3', a4: 'A4', a5: 'A5', letter: 'Letter', legal: 'Legal' };
 
 interface Geometry {
   size: PageSize;
@@ -36,22 +24,23 @@ interface Geometry {
   margin: Edges;
 }
 
+/** The document's `@page` rule, resolved by the engine. */
+interface PageSetup {
+  size?: PageSize;
+  landscape?: boolean;
+  margin?: Edges;
+}
+
 /** Explicit options win, then the document's `@page` rule, then the defaults (A4 portrait, 10mm). */
-function geometry(o: CreateOptions, page: PageRule): Geometry {
+function geometry(o: CreateOptions, page: PageSetup): Geometry {
   let size: PageSize = 'A4';
   let orientation: 'portrait' | 'landscape' | undefined = 'portrait';
 
   if (page.size) {
-    const tokens = page.size.toLowerCase().split(/\s+/);
-    const paper = tokens.map((t) => PAPER[t]).find(Boolean);
-    const lengths = tokens.map((t) => parseCss(`width:${t}`).width).filter((v): v is number => typeof v === 'number');
-    if (paper) size = paper;
-    if (lengths.length === 2) {
-      size = { width: lengths[0]!, height: lengths[1]! };
-      orientation = undefined;
-    }
-    if (tokens.includes('landscape')) orientation = 'landscape';
+    size = page.size;
+    if (typeof size !== 'string') orientation = undefined;
   }
+  if (page.landscape) orientation = 'landscape';
 
   if (o.width !== undefined || o.height !== undefined) {
     if (o.width === undefined || o.height === undefined) throw invalid('Custom page size needs both `width` and `height`.');
@@ -70,8 +59,8 @@ function geometry(o: CreateOptions, page: PageRule): Geometry {
   }
 
   let margin: Edges;
-  if (o.margin === undefined && page.margin) {
-    margin = parseCss(`padding:${page.margin}`).padding ?? 28.35;
+  if (o.margin === undefined && page.margin !== undefined) {
+    margin = page.margin;
   } else {
     const m = normalizeMargin(o.margin);
     margin = { top: pt(m.top), right: pt(m.right), bottom: pt(m.bottom), left: pt(m.left) };
@@ -114,80 +103,23 @@ async function reactMarkup(element: unknown): Promise<string> {
   }
 }
 
-const isRemote = (url: string) => /^[a-z][\w+.-]*:/i.test(url) && !url.startsWith('file:');
-
-/** A local file inside `baseDir`, or why it cannot be read. */
-async function readInside(url: string, baseDir: string): Promise<{ bytes: Buffer } | { reason: string }> {
-  try {
-    const requested = url.replace(/^file:\/\//, '');
-    const unresolvedBase = resolve(baseDir);
-    const unresolvedPath = resolve(unresolvedBase, requested);
-    const unresolvedRelative = relative(unresolvedBase, unresolvedPath);
-    if (unresolvedRelative.startsWith('..') || isAbsolute(unresolvedRelative)) return { reason: `it is outside baseDir (${baseDir}).` };
-    const base = await realpath(unresolvedBase);
-    const path = await realpath(unresolvedPath);
-    const rel = relative(base, path);
-    if (rel.startsWith('..') || isAbsolute(rel)) return { reason: `it is outside baseDir (${baseDir}).` };
-    return { bytes: await readFile(path) };
-  } catch {
-    return { reason: 'file not found.' };
-  }
+interface PageParts {
+  props: Partial<Page>;
+  header?: Node[];
+  footer?: Node[];
+  children: Node[];
 }
 
-/** Read a local stylesheet, never outside `baseDir`. Remote stylesheets are not fetched. */
-async function linked(href: string, baseDir: string, warnings: Warning[]): Promise<StyleSource | undefined> {
-  const fail = (reason: string) => {
-    warnings.push({ type: 'stylesheet_failed', url: href, message: `Stylesheet ${href} was not applied: ${reason}` });
-    return undefined;
-  };
-  if (isRemote(href)) return fail('remote stylesheets are never fetched. Inline it in a <style> element or pass it with the `css` option.');
-  const r = await readInside(href, baseDir);
-  if ('reason' in r) return fail(r.reason);
-  // url(…)s inside it are relative to its own folder
-  return { css: r.bytes.toString('utf8'), base: posix.dirname(href.replace(/^file:\/\//, '').replace(/\\/g, '/')).replace(/^\.$/, '') };
-}
-
-const FONT_FORMATS = new Set(['truetype', 'opentype', 'ttf', 'otf']);
-
-/** `@font-face` rules → embedded fonts: the first local .ttf / .otf source of each rule. */
-async function fontFaces(rules: FontFaceRule[], baseDir: string, warnings: Warning[]): Promise<FontFace[]> {
-  const out: FontFace[] = [];
-  for (const rule of rules) {
-    const fail = (url: string, reason: string) =>
-      warnings.push({ type: 'font_failed', url, message: `Font "${rule.family}" from ${url} was not loaded: ${reason} Text in "${rule.family}" uses Inter instead.` });
-    const usable = rule.src.find((s) => !isRemote(s.url) && (s.format ? FONT_FORMATS.has(s.format) : /\.(ttf|otf)$/i.test(s.url)));
-    if (!usable) {
-      const first = rule.src[0]!;
-      fail(first.url, isRemote(first.url) ? 'web fonts are never downloaded. Put the .ttf / .otf file next to your HTML and use url(fonts/…).' : 'only .ttf and .otf files are supported (not WOFF / WOFF2): convert it, e.g. with fonttools.');
-      continue;
-    }
-    const r = await readInside(usable.url, baseDir);
-    if ('reason' in r) {
-      fail(usable.url, r.reason);
-      continue;
-    }
-    const w = (rule.weight ?? 'normal').trim().split(/\s+/)[0]!.toLowerCase();
-    const weight = w === 'bold' ? 700 : w === 'normal' ? 400 : Math.min(900, Math.max(100, Math.round(Number(w) / 100) * 100 || 400));
-    const style: FontStyle = /italic|oblique/i.test(rule.style ?? '') ? 'italic' : 'normal';
-    out.push({ family: rule.family, weight, style, source: { data: r.bytes.toString('base64') } });
-  }
-  return out;
-}
-
-function find(children: Child[], tag: string): El | undefined {
-  for (const c of children) {
-    if (typeof c === 'string') continue;
-    if (c.tag === tag) return c;
-    const inner = find(c.children, tag);
-    if (inner) return inner;
-  }
-  return undefined;
-}
-
+/** What the engine's HTML converter returns (`convertHtml`). */
 interface Parts {
   meta?: Record<string, unknown>;
   pages: PageParts[];
-  sheet: Stylesheet;
+  header?: Node[];
+  footer?: Node[];
+  page: PageSetup;
+  /** `@font-face` fonts, as `{ buffer: n }` sources into `buffers`. */
+  fonts: FontFace[];
+  buffers: Buffer[];
 }
 
 function watermarkOf(w: CreateOptions['watermark']): Watermark | undefined {
@@ -197,39 +129,24 @@ function watermarkOf(w: CreateOptions['watermark']): Watermark | undefined {
   return stamp;
 }
 
-/** HTML (from a string or from React) → pages, with the CSS cascade applied. */
+/**
+ * HTML (from a string, from React, or only the header / footer of a Markdown document) → pages, by the
+ * engine: HTML5 parsing, the CSS cascade, linked stylesheets and `@font-face` files read inside `baseDir`.
+ */
 async function markupParts(markup: string, o: CreateOptions, baseDir: string, warnings: Warning[]): Promise<Parts> {
-  const children = parseMarkup(markup);
-  const css: StyleSource[] = [UA_CSS];
-  for (const href of stylesheetLinks(children)) {
-    const text = await linked(href, baseDir, warnings);
-    if (text) css.push(text);
+  if (o.css !== undefined && typeof o.css !== 'string') throw invalid('`css` must be a string.');
+  for (const k of ['header', 'footer'] as const) {
+    if (o[k] !== undefined && typeof o[k] !== 'string') throw invalid(`\`${k}\` must be an HTML string.`);
   }
-  css.push(...styleElements(children));
-  if (o.css !== undefined) {
-    if (typeof o.css !== 'string') throw invalid('`css` must be a string.');
-    css.push(o.css);
+  let out: { parts: string; buffers: Buffer[] };
+  try {
+    out = await loadNative().convertHtml(markup, { baseDir, css: o.css, header: o.header, footer: o.footer });
+  } catch (e) {
+    throw nativeError(e);
   }
-  const sheet = parseStylesheets(css);
-  applyStylesheet(children, sheet);
-
-  const { meta, pages } = pagesOf(children);
-  // <html lang> and <title> fill the metadata a component tree would give
-  const m: Record<string, unknown> = { ...meta };
-  const lang = find(children, 'html')?.attrs.lang;
-  const title = find(children, 'title')?.children.filter((x) => typeof x === 'string').join('').trim();
-  if (lang && m.lang === undefined) m.lang = lang;
-  if (title && m.title === undefined) m.title = title;
-  return { meta: Object.keys(m).length ? m : undefined, pages, sheet };
-}
-
-/** `header` / `footer` options are HTML: converted like the body, `{page}` / `{pages}` kept. */
-function band(html: string | undefined, sheet: Stylesheet): Node[] | undefined {
-  if (html === undefined) return undefined;
-  const children = parseMarkup(html);
-  applyStylesheet(children, sheet);
-  const nodes = blocks(children);
-  return nodes.length ? nodes : undefined;
+  const parts = JSON.parse(out.parts) as Omit<Parts, 'buffers'> & { warnings: Warning[] };
+  warnings.push(...parts.warnings);
+  return { ...parts, buffers: out.buffers };
 }
 
 /**
@@ -243,7 +160,10 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
   if (o.markdown !== undefined) {
     if (typeof o.markdown !== 'string' || !o.markdown.trim()) throw invalid('`markdown` must be a non-empty string.');
     if (o.css !== undefined) throw invalid('`css` applies to `html` and `react` sources. Markdown is styled by TurboPDF; use `html` for full control.');
-    parts = { pages: [{ props: {}, children: markdownToNodes(o.markdown) }], sheet: parseStylesheets([]) };
+    const pages = [{ props: {}, children: markdownToNodes(o.markdown) }];
+    // the header / footer options are HTML, converted by the engine
+    const bands = o.header !== undefined || o.footer !== undefined ? await markupParts('', o, baseDir, warnings) : undefined;
+    parts = { pages, header: bands?.header, footer: bands?.footer, page: {}, fonts: [], buffers: [] };
   } else if (o.html !== undefined) {
     if (typeof o.html !== 'string' || !o.html.trim()) throw invalid('`html` must be a non-empty string.');
     parts = await markupParts(o.html, o, baseDir, warnings);
@@ -251,9 +171,8 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
     parts = await markupParts(await reactMarkup(o.react), o, baseDir, warnings);
   }
 
-  const geo = geometry(o, parts.sheet.page);
-  const header = band(o.header, parts.sheet);
-  const footer = band(o.footer, parts.sheet);
+  const geo = geometry(o, parts.page);
+  const { header, footer } = parts;
   const watermark = watermarkOf(o.watermark);
   for (const k of ['bookmarks', 'tagged', 'pdfua'] as const) {
     if (o[k] !== undefined && typeof o[k] !== 'boolean') throw invalid(`\`${k}\` must be true or false.`);
@@ -297,7 +216,14 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
     ),
   };
   // fonts given with the option come last: they win over @font-face rules of the same family and weight
-  const fonts = [...(await fontFaces(parts.sheet.fontFaces, baseDir, warnings)), ...((await fontsOf(o, buffers)) ?? [])];
+  // `@font-face` bytes from the converter: next to the tree, or inline when only the tree is wanted
+  const offset = buffers?.length ?? 0;
+  buffers?.push(...parts.buffers);
+  const faces = parts.fonts.map((f): FontFace => {
+    const n = (f.source as { buffer: number }).buffer;
+    return { ...f, source: buffers ? { buffer: n + offset } : { data: parts.buffers[n]!.toString('base64') } };
+  });
+  const fonts = [...faces, ...((await fontsOf(o, buffers)) ?? [])];
   if (fonts.length) doc.fonts = fonts;
   return doc;
 }
