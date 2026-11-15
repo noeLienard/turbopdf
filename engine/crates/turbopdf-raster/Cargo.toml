@@ -1,0 +1,19 @@
+[package]
+name = "turbopdf-raster"
+description = "PNG previews (tiny-skia) from the same layout as the PDF."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+turbopdf-tree.workspace = true
+turbopdf-fonts.workspace = true
+turbopdf-layout.workspace = true
+tiny-skia.workspace = true
+rustybuzz.workspace = true
+jpeg-decoder.workspace = true
+resvg.workspace = true
+image-webp.workspace = true
+gif.workspace = true
+turbopdf-text.workspace = true
+thiserror.workspace = true

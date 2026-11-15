@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { Readable } from 'node:stream';
-import { PapierError } from './errors';
+import { TurboPdfError } from './errors';
 import { checkScale, fromHtml, fromPngs } from './preview';
 import { withSlot } from './queue';
 import { isReactElement, renderPdf } from './rust/engine';
@@ -11,7 +11,7 @@ const SOURCES = ['html', 'react', 'markdown', 'tree'] as const;
 
 /** Options of earlier, browser-based versions, with what to do instead. */
 const REMOVED: Record<string, string> = {
-  url: 'Papier renders without a browser and never touches the network. Fetch the page yourself and pass { html, baseDir }.',
+  url: 'TurboPDF renders without a browser and never touches the network. Fetch the page yourself and pass { html, baseDir }.',
   engine: 'There is a single engine now (Rust); remove the option.',
   printBackground: 'Backgrounds are always printed; remove the option.',
   media: 'Stylesheets are applied as for print (`@media print` rules apply); remove the option.',
@@ -89,7 +89,7 @@ class PdfImpl implements Pdf {
   }
 }
 
-const invalid = (message: string) => new PapierError('invalid_source', message);
+const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
 function normalizeInput(input: unknown): CreateOptions {
   if (typeof input === 'string') return { html: input };
@@ -100,7 +100,7 @@ function normalizeInput(input: unknown): CreateOptions {
 
 function assertStrict(o: CreateOptions, warnings: Warning[]): void {
   if (!o.strict || !warnings.length) return;
-  const err = new PapierError('warnings_found', `Rendering produced ${warnings.length} warning(s) and \`strict\` is on:\n${warnings.map((w) => `  - [${w.type}] ${w.message}`).join('\n')}`);
+  const err = new TurboPdfError('warnings_found', `Rendering produced ${warnings.length} warning(s) and \`strict\` is on:\n${warnings.map((w) => `  - [${w.type}] ${w.message}`).join('\n')}`);
   err.warnings = warnings;
   throw err;
 }
@@ -132,7 +132,7 @@ export async function create(input: string | ReactElementLike | CreateOptions): 
         : `Several sources provided (${given.join(', ')}). Pass exactly one of: html, react, markdown, tree.`,
     );
   }
-  if (o.signal?.aborted) throw new PapierError('aborted', 'Rendering was aborted before it started.');
+  if (o.signal?.aborted) throw new TurboPdfError('aborted', 'Rendering was aborted before it started.');
 
   const r = await withSlot(o.signal, () => renderPdf(o));
   assertStrict(o, r.warnings);

@@ -2,26 +2,26 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import papier from '../src/index';
+import turbopdf from '../src/index';
 
 describe('output', () => {
   it('save() writes the file and creates missing folders', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'papier-'));
-    const pdf = await papier.create('<h1>Saved</h1>');
+    const dir = mkdtempSync(join(tmpdir(), 'turbopdf-'));
+    const pdf = await turbopdf.create('<h1>Saved</h1>');
     const file = join(dir, 'a', 'b', 'facture.pdf');
     await pdf.save(file);
     expect(readFileSync(file).equals(pdf.toBuffer())).toBe(true);
   });
 
   it('toBuffer() is a real PDF', async () => {
-    const buf = (await papier.create('<p>x</p>')).toBuffer();
+    const buf = (await turbopdf.create('<p>x</p>')).toBuffer();
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(buf.subarray(-6).toString()).toContain('%%EOF');
   });
 
   it('toResponse() builds a web Response with the right headers', async () => {
-    const pdf = await papier.create('<p>x</p>');
+    const pdf = await turbopdf.create('<p>x</p>');
     const res = pdf.toResponse({ filename: 'Facture été.pdf', disposition: 'attachment' });
     expect(res).toBeInstanceOf(Response);
     expect(res.status).toBe(200);
@@ -35,13 +35,13 @@ describe('output', () => {
   });
 
   it('toResponse() defaults to inline and accepts extra headers', async () => {
-    const res = (await papier.create('<p>x</p>')).toResponse({ headers: { 'Cache-Control': 'no-store' } });
+    const res = (await turbopdf.create('<p>x</p>')).toResponse({ headers: { 'Cache-Control': 'no-store' } });
     expect(res.headers.get('content-disposition')).toContain('inline; filename="document.pdf"');
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
   it('toStream() streams the same bytes', async () => {
-    const pdf = await papier.create('<p>x</p>');
+    const pdf = await turbopdf.create('<p>x</p>');
     const chunks: Buffer[] = [];
     for await (const c of pdf.toStream()) chunks.push(c as Buffer);
     expect(Buffer.concat(chunks).equals(pdf.toBuffer())).toBe(true);
@@ -51,15 +51,15 @@ describe('output', () => {
 describe('deterministic (always)', () => {
   const html = '<h1>Same</h1><p>input</p>';
   it('gives byte-identical PDFs for the same input', async () => {
-    const a = await papier.create({ html });
+    const a = await turbopdf.create({ html });
     await new Promise((r) => setTimeout(r, 1100)); // the clock moves between the two renders
-    const b = await papier.create({ html });
+    const b = await turbopdf.create({ html });
     expect(a.toBuffer().equals(b.toBuffer())).toBe(true);
     expect(a.toBuffer().toString('latin1')).not.toMatch(/D:2026/);
   });
 
   it('stays a valid, readable PDF', async () => {
-    const pdf = await papier.create({ html });
+    const pdf = await turbopdf.create({ html });
     expect(pdf.pages).toBe(1);
     expect(await pdf.toPng({ scale: 1 })).toHaveLength(1);
   });

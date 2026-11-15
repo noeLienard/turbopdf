@@ -6,14 +6,14 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { create } from '../index';
-import { PapierError } from '../errors';
+import { TurboPdfError } from '../errors';
 import type { CreateOptions, Pdf, PngPage, Warning } from '../types';
 import { UI_HTML } from './ui';
 
 type Extra = Partial<Omit<CreateOptions, 'html' | 'react' | 'markdown' | 'tree'>>;
 
 const USAGE = `Usage:
-  papier dev <file> [--port 4000] [--no-open]
+  turbopdf dev <file> [--port 4000] [--no-open]
 
   <file>  a React component (.tsx/.jsx/.ts/.js, default export), an .html file or a .md file
 
@@ -30,7 +30,7 @@ function findTsconfig(dir: string): string | undefined {
 
 /** A tsconfig that forces the automatic JSX runtime, extending the project's one if present. */
 function jsxTsconfig(file: string): string {
-  const dir = mkdtempSync(join(tmpdir(), 'papier-'));
+  const dir = mkdtempSync(join(tmpdir(), 'turbopdf-'));
   const base = findTsconfig(dirname(file));
   const path = join(dir, 'tsconfig.json');
   writeFileSync(path, JSON.stringify({ ...(base ? { extends: base } : {}), compilerOptions: { jsx: 'react-jsx' } }));
@@ -46,7 +46,7 @@ async function loadSource(file: string, tsconfig: () => string): Promise<CreateO
   if (ext === '.html' || ext === '.htm') return { html: readFileSync(file, 'utf8'), baseDir: dirname(file) }; // relative images / stylesheets keep working
 
   if (!['.tsx', '.jsx', '.ts', '.js', '.mjs', '.cjs'].includes(ext)) {
-    throw new PapierError('invalid_source', `Unsupported file type "${ext}". Use a .tsx/.jsx component, an .html file or a .md file.`);
+    throw new TurboPdfError('invalid_source', `Unsupported file type "${ext}". Use a .tsx/.jsx component, an .html file or a .md file.`);
   }
 
   const { tsImport } = await import('tsx/esm/api');
@@ -55,9 +55,9 @@ async function loadSource(file: string, tsconfig: () => string): Promise<CreateO
     options?: Extra;
   };
   const exported = mod.default;
-  if (exported === undefined) throw new PapierError('invalid_source', `${basename(file)} has no default export. Use: export default function Invoice() { return <h1>…</h1>; }`);
+  if (exported === undefined) throw new TurboPdfError('invalid_source', `${basename(file)} has no default export. Use: export default function Invoice() { return <h1>…</h1>; }`);
 
-  // resolve React from the user's project, not from papier
+  // resolve React from the user's project, not from turbopdf
   const req = createRequire(pathToFileURL(file).href);
   let element: unknown = exported;
   let renderToStaticMarkup: (el: unknown) => string;
@@ -68,13 +68,13 @@ async function loadSource(file: string, tsconfig: () => string): Promise<CreateO
     const server = (await import(pathToFileURL(req.resolve('react-dom/server')).href)) as { default?: { renderToStaticMarkup: typeof renderToStaticMarkup }; renderToStaticMarkup?: typeof renderToStaticMarkup };
     renderToStaticMarkup = server.default?.renderToStaticMarkup ?? server.renderToStaticMarkup!;
   } catch (cause) {
-    throw new PapierError('react_not_installed', 'Could not load "react" and "react-dom" from your project. Run: npm install react react-dom', { cause });
+    throw new TurboPdfError('react_not_installed', 'Could not load "react" and "react-dom" from your project. Run: npm install react react-dom', { cause });
   }
   let html: string;
   try {
     html = renderToStaticMarkup(element);
   } catch (cause) {
-    throw new PapierError('render_failed', `Your component threw while rendering: ${(cause as Error).message}`, { cause });
+    throw new TurboPdfError('render_failed', `Your component threw while rendering: ${(cause as Error).message}`, { cause });
   }
   return { baseDir: dirname(file), ...(mod.options ?? {}), html } as CreateOptions;
 }
@@ -128,7 +128,7 @@ export async function dev(argv: string[]): Promise<void> {
       state.status = 'ready';
       console.log(`✓ ${pdf.pages} page${pdf.pages > 1 ? 's' : ''}${pdf.warnings.length ? `, ${pdf.warnings.length} warning(s)` : ''} (${Date.now() - t0}ms)`);
     } catch (e) {
-      state.error = e instanceof PapierError ? `${e.code}: ${e.message}` : String((e as Error)?.message ?? e);
+      state.error = e instanceof TurboPdfError ? `${e.code}: ${e.message}` : String((e as Error)?.message ?? e);
       state.status = 'error';
       console.error(`✗ ${state.error}`);
     }
@@ -166,12 +166,12 @@ export async function dev(argv: string[]): Promise<void> {
     server.once('error', fail);
     server.listen(port, '127.0.0.1', ok);
   }).catch((e: NodeJS.ErrnoException) => {
-    console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Try: papier dev ${args[0]} --port ${port + 1}` : e.message);
+    console.error(e.code === 'EADDRINUSE' ? `Port ${port} is already in use. Try: turbopdf dev ${args[0]} --port ${port + 1}` : e.message);
     process.exit(1);
   });
 
   const url = `http://localhost:${port}`;
-  console.log(`papier dev — ${basename(file)}\n  preview: ${url}\n  Ctrl+C to stop`);
+  console.log(`turbopdf dev — ${basename(file)}\n  preview: ${url}\n  Ctrl+C to stop`);
 
   // watch the file's folder (editors often replace files instead of writing them)
   let timer: NodeJS.Timeout | undefined;
@@ -193,10 +193,10 @@ export async function dev(argv: string[]): Promise<void> {
   await renderNow();
 }
 
-// executed as `papier dev …`
+// executed as `turbopdf dev …`
 const [command, ...rest] = process.argv.slice(2);
 if (command === 'install') {
-  console.log('Nothing to install: Papier renders without a browser.');
+  console.log('Nothing to install: TurboPDF renders without a browser.');
 } else if (command === 'dev') {
   dev(rest).catch((e) => { console.error(e); process.exit(1); });
 } else {

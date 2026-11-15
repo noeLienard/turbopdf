@@ -1,7 +1,7 @@
 // Static markup (what React's renderToStaticMarkup produces) → document tree nodes.
 //
 // Two vocabularies are understood:
-//  * Papier components (`papier/components`) render `<papier-*>` elements whose `data-p` attribute holds
+//  * TurboPDF components (`turbopdf/components`) render `<turbopdf-*>` elements whose `data-p` attribute holds
 //    their props as JSON: they map 1:1 to tree nodes.
 //  * HTML (div, p, h1–h6, span/b/i, a, img, svg, table, ul/ol, hr, br), its CSS already cascaded into
 //    `style` attributes (see ./cascade): mapped to the closest tree nodes.
@@ -85,7 +85,7 @@ function props<T extends object>(el: El): T {
   return (raw ? JSON.parse(raw) : {}) as T;
 }
 
-const INLINE = new Set(['span', 'b', 'strong', 'i', 'em', 'a', 'code', 'small', 'u', 's', 'sub', 'sup', 'label', 'br', 'mark', 'abbr', 'time', 'papier-span']);
+const INLINE = new Set(['span', 'b', 'strong', 'i', 'em', 'a', 'code', 'small', 'u', 's', 'sub', 'sup', 'label', 'br', 'mark', 'abbr', 'time', 'turbopdf-span']);
 /** An `<a>` around blocks or images (a clickable card, a linked logo) is a block itself. */
 const isInline = (c: Child): boolean => typeof c === 'string' || (INLINE.has(c.tag) && !(c.tag === 'a' && c.children.some((x) => !isInline(x))));
 
@@ -133,7 +133,7 @@ function spans(children: Child[], style: TextStyle | undefined, out: Span[] = []
           add({ color: '#2563eb' });
         }
         break;
-      case 'papier-span': {
+      case 'turbopdf-span': {
         const p = props<{ style?: TextStyle; link?: string }>(c);
         add(p.style ?? {});
         if (p.link) l = p.link;
@@ -143,7 +143,7 @@ function spans(children: Child[], style: TextStyle | undefined, out: Span[] = []
     const css = textStyleOf(parseCss(c.attrs.style));
     if (css) add(css);
     // block elements inside a text (e.g. <div> in a <p>) start a new line
-    const block = !INLINE.has(c.tag) && !c.tag.startsWith('papier-');
+    const block = !INLINE.has(c.tag) && !c.tag.startsWith('turbopdf-');
     if (block) out.push({ text: '\n', style });
     spans(c.children, s, out, l);
     if (block) out.push({ text: '\n', style });
@@ -284,29 +284,29 @@ function block(el: El): Node[] {
 function blockOf(el: El): Node[] {
   const style = parseCss(el.attrs.style);
   switch (el.tag) {
-    // ---- Papier components
-    case 'papier-view':
+    // ---- TurboPDF components
+    case 'turbopdf-view':
       return [{ ...props<Omit<View, 'children'>>(el), type: 'view', children: blocks(el.children) }];
-    case 'papier-text':
+    case 'turbopdf-text':
       return [{ ...props<Omit<Text, 'content'>>(el), type: 'text', content: content(el.children) }];
-    case 'papier-heading':
+    case 'turbopdf-heading':
       return [{ ...props<Omit<Heading, 'content'>>(el), type: 'heading', content: content(el.children) }];
-    case 'papier-image':
+    case 'turbopdf-image':
       return [{ ...props<Image>(el), type: 'image' }];
-    case 'papier-table':
+    case 'turbopdf-table':
       return [componentTable(el)];
-    case 'papier-pagebreak':
+    case 'turbopdf-pagebreak':
       return [{ ...props<PageBreak>(el), type: 'page_break' }];
-    case 'papier-pagenumber':
+    case 'turbopdf-pagenumber':
       return [{ ...props<PageNumber>(el), type: 'page_number' }];
-    case 'papier-toc':
+    case 'turbopdf-toc':
       return [{ ...props<TableOfContents>(el), type: 'table_of_contents' }];
-    case 'papier-document':
-    case 'papier-page':
-    case 'papier-body':
+    case 'turbopdf-document':
+    case 'turbopdf-page':
+    case 'turbopdf-body':
       return blocks(el.children);
-    case 'papier-header':
-    case 'papier-footer':
+    case 'turbopdf-header':
+    case 'turbopdf-footer':
       return [];
 
     // ---- HTML
@@ -484,10 +484,10 @@ function componentTable(el: El): Node {
   const header: Row[] = [];
   const rows: Row[] = [];
   for (const r of el.children) {
-    if (typeof r === 'string' || r.tag !== 'papier-row') continue;
+    if (typeof r === 'string' || r.tag !== 'turbopdf-row') continue;
     const { header: isHeader, ...rp } = props<{ header?: boolean } & Omit<Row, 'cells'>>(r);
     const cells: Cell[] = r.children
-      .filter((c): c is El => typeof c !== 'string' && c.tag === 'papier-cell')
+      .filter((c): c is El => typeof c !== 'string' && c.tag === 'turbopdf-cell')
       .map((c) => ({ ...props<Omit<Cell, 'children'>>(c), children: blocks(c.children) }));
     (isHeader ? header : rows).push({ ...rp, cells });
   }
@@ -503,12 +503,12 @@ export interface PageParts {
   children: Node[];
 }
 
-/** Find `<papier-page>` elements (with their header / footer) at the top of the markup. */
+/** Find `<turbopdf-page>` elements (with their header / footer) at the top of the markup. */
 export function pagesOf(children: Child[]): { meta?: Record<string, unknown>; pages: PageParts[] } {
   usedIds = new Set();
   let top = children;
   let meta: Record<string, unknown> | undefined;
-  const doc = children.find((c): c is El => typeof c !== 'string' && c.tag === 'papier-document');
+  const doc = children.find((c): c is El => typeof c !== 'string' && c.tag === 'turbopdf-document');
   if (doc) {
     meta = props<Record<string, unknown>>(doc);
     top = doc.children;
@@ -521,15 +521,15 @@ export function pagesOf(children: Child[]): { meta?: Record<string, unknown>; pa
     loose = [];
   };
   for (const c of top) {
-    if (typeof c !== 'string' && c.tag === 'papier-page') {
+    if (typeof c !== 'string' && c.tag === 'turbopdf-page') {
       flushLoose();
       const part = (tag: string) => {
         const el = c.children.find((x): x is El => typeof x !== 'string' && x.tag === tag);
         return el ? blocks(el.children) : undefined;
       };
-      const header = part('papier-header');
-      const footer = part('papier-footer');
-      pages.push({ props: props(c), header: header?.length ? header : undefined, footer: footer?.length ? footer : undefined, children: part('papier-body') ?? [] });
+      const header = part('turbopdf-header');
+      const footer = part('turbopdf-footer');
+      pages.push({ props: props(c), header: header?.length ? header : undefined, footer: footer?.length ? footer : undefined, children: part('turbopdf-body') ?? [] });
     } else {
       loose.push(c);
     }

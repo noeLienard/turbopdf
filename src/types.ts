@@ -4,7 +4,7 @@ export type Format = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
 export type Margin = string | { top?: string; right?: string; bottom?: string; left?: string };
 
-/** Minimal structural type so Papier never depends on @types/react. */
+/** Minimal structural type so TurboPDF never depends on @types/react. */
 export interface ReactElementLike {
   type: unknown;
   props: unknown;
@@ -80,7 +80,7 @@ export type CreateOptions = BaseOptions &
     | { html: string; react?: never; markdown?: never; tree?: never }
     | { react: ReactElementLike; html?: never; markdown?: never; tree?: never }
     | { markdown: string; html?: never; react?: never; tree?: never }
-    /** A document tree (see `papier/tree`). */
+    /** A document tree (see `turbopdf/tree`). */
     | { tree: TreeDocument; html?: never; react?: never; markdown?: never }
   );
 
@@ -127,7 +127,7 @@ export interface Preview {
    * Put it once in the page that shows the preview, e.g. `<style>{preview.style}</style>`.
    */
   readonly style: string;
-  /** One HTML fragment per page (`<section class="papier-page">…`), each needing {@link style}. */
+  /** One HTML fragment per page (`<section class="turbopdf-page">…`), each needing {@link style}. */
   readonly pages: PreviewPage[];
   /** A complete HTML document (style + every page): for an `<iframe srcdoc>`, a file or a response. */
   toHtml(): string;
@@ -144,7 +144,7 @@ export interface PreviewPage {
   width: number;
   /** Page height in points */
   height: number;
-  /** `<section class="papier-page" …>…</section>` */
+  /** `<section class="turbopdf-page" …>…</section>` */
   html: string;
 }
 

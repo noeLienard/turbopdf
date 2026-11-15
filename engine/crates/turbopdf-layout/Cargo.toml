@@ -1,0 +1,20 @@
+[package]
+name = "turbopdf-layout"
+description = "Flexbox layout (taffy) and pagination: positions every box on physical pages."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+qrcodegen = "1.8"
+turbopdf-tree.workspace = true
+turbopdf-fonts.workspace = true
+turbopdf-text.workspace = true
+taffy.workspace = true
+base64.workspace = true
+rustybuzz.workspace = true
+hypher.workspace = true
+jpeg-decoder.workspace = true
+thiserror.workspace = true
+usvg.workspace = true
+image-webp.workspace = true

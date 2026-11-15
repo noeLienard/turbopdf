@@ -1,4 +1,4 @@
-# Papier document tree — specification v1
+# TurboPDF document tree — specification v1
 
 The **document tree** is the only contract between the SDK (TypeScript) and the engine (Rust).
 
@@ -6,7 +6,7 @@ The **document tree** is the only contract between the SDK (TypeScript) and the 
 React / Markdown ──(SDK)──▶ document tree (JSON) ──(engine)──▶ PDF + HTML/PNG previews + warnings
 ```
 
-* **Source of truth:** `crates/papier-tree` (Rust structs, serde). The TypeScript types in `src/tree.ts`
+* **Source of truth:** `crates/turbopdf-tree` (Rust structs, serde). The TypeScript types in `src/tree.ts`
   are *generated* from it (`npm run gen:tree`), so they cannot drift.
 * **Strict:** unknown fields, unknown node types, invalid colors/dimensions are rejected at parse time;
   structural problems are reported by `validate()` with a JSON Pointer path and a code.
@@ -175,31 +175,31 @@ engine/
 ├── Cargo.toml · rust-toolchain.toml · SPEC.md
 ├── fixtures/                 # JSON trees used by all tests
 └── crates/
-    ├── papier-tree           # ✅ types · serde · validate · warnings        (this spec)
-    ├── papier-fonts          # font db, embedded Inter, loading, fallback
-    ├── papier-text           # shaping (parley/rustybuzz) · line breaking · hyphenation (hypher)
-    ├── papier-layout         # style resolution · taffy · pagination → Layout
-    ├── papier-pdf            # krilla writer (subsetting, deterministic)
-    ├── papier-raster         # tiny-skia PNG previews from the same Layout
-    ├── papier-html           # HTML/CSS previews (real text, embedded fonts, links) from the same Layout
-    ├── papier-engine         # facade: Engine::render / preview / preview_html
-    ├── papier-node           # (next) napi-rs, prebuilt per platform
-    └── papier-wasm           # (next) wasm-bindgen, edge + browser
+    ├── turbopdf-tree           # ✅ types · serde · validate · warnings        (this spec)
+    ├── turbopdf-fonts          # font db, embedded Inter, loading, fallback
+    ├── turbopdf-text           # shaping (parley/rustybuzz) · line breaking · hyphenation (hypher)
+    ├── turbopdf-layout         # style resolution · taffy · pagination → Layout
+    ├── turbopdf-pdf            # krilla writer (subsetting, deterministic)
+    ├── turbopdf-raster         # tiny-skia PNG previews from the same Layout
+    ├── turbopdf-html           # HTML/CSS previews (real text, embedded fonts, links) from the same Layout
+    ├── turbopdf-engine         # facade: Engine::render / preview / preview_html
+    ├── turbopdf-node           # (next) napi-rs, prebuilt per platform
+    └── turbopdf-wasm           # (next) wasm-bindgen, edge + browser
 bench/                        # benchmark notes (Chromium figures recorded before its removal)
 ```
 
 ```
-papier-tree ◀── papier-fonts ◀── papier-text ◀── papier-layout ◀─┬── papier-pdf ◀──┐
-                                                                  └── papier-raster ◀┴── papier-engine ◀── node / wasm
+turbopdf-tree ◀── turbopdf-fonts ◀── turbopdf-text ◀── turbopdf-layout ◀─┬── turbopdf-pdf ◀──┐
+                                                                  └── turbopdf-raster ◀┴── turbopdf-engine ◀── node / wasm
 ```
 
 ## 11. Roadmap
 
-1. ✅ **Tree spec** (this document) + `papier-tree` + generated TS types.
-2. `papier-fonts` + `papier-text`: embedded Inter, shaping, line breaking, `missing_glyph`.
-3. `papier-layout`: style resolution, taffy, pagination (tables, `keepTogether`, header/footer).
-4. `papier-pdf` then `papier-raster`.
-5. `papier-node` + SDK adapter (HTML/React/Markdown → tree), `papier-wasm`. Chromium removed from the SDK.
+1. ✅ **Tree spec** (this document) + `turbopdf-tree` + generated TS types.
+2. `turbopdf-fonts` + `turbopdf-text`: embedded Inter, shaping, line breaking, `missing_glyph`.
+3. `turbopdf-layout`: style resolution, taffy, pagination (tables, `keepTogether`, header/footer).
+4. `turbopdf-pdf` then `turbopdf-raster`.
+5. `turbopdf-node` + SDK adapter (HTML/React/Markdown → tree), `turbopdf-wasm`. Chromium removed from the SDK.
 6. Benchmarks, determinism CI, then flip the default engine.
 
 ## 12. Open questions (decide before step 3)

@@ -1,0 +1,26 @@
+[package]
+name = "turbopdf-engine"
+description = "TurboPDF rendering engine: document tree in, PDF + PNG previews + warnings out."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+turbopdf-tree.workspace = true
+turbopdf-fonts.workspace = true
+turbopdf-layout.workspace = true
+turbopdf-pdf.workspace = true
+turbopdf-raster.workspace = true
+turbopdf-html.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+turbopdf-text.workspace = true
+
+[dev-dependencies]
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+ttf-parser = "0.25"
+rqrr = "0.9"
+tiny-skia.workspace = true
+serde_json.workspace = true
+turbopdf-layout.workspace = true
+turbopdf-pdf.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "turbopdf-text"
+description = "Text shaping and line breaking (parley, rustybuzz, hypher)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+turbopdf-tree.workspace = true
+turbopdf-fonts.workspace = true
+rustybuzz.workspace = true
+hypher.workspace = true

@@ -1,7 +1,7 @@
 import { createElement as h } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Cell, Document, Heading, Image, Page, PageBreak, PageNumber, Row, Span, Table, Text, View } from '../src/components';
-import papier, { PapierError } from '../src/index';
+import turbopdf, { TurboPdfError } from '../src/index';
 import { parseCss } from '../src/rust/css';
 import { toTree } from '../src/rust/engine';
 import type { Document as Tree } from '../src/tree';
@@ -14,7 +14,7 @@ const squash = (s: string) => s.replace(/\s+/g, '');
 describe('one engine, no browser', () => {
   it('every source is rendered by the Rust engine', async () => {
     for (const input of [h(Text, null, 'Bonjour'), { markdown: '# Bonjour' }, '<p>Bonjour</p>'] as const) {
-      expect(producer((await papier.create(input as never)).toBuffer())).toBe('Papier');
+      expect(producer((await turbopdf.create(input as never)).toBuffer())).toBe('TurboPDF');
     }
   });
 
@@ -77,7 +77,7 @@ describe('HTML + CSS cascade', () => {
   });
 
   it('CSS pagination: break-before / break-after / break-inside / display:none', async () => {
-    const pdf = await papier.create('<p>UN</p><p style="break-before:page">DEUX</p><p style="page-break-after:always">TROIS</p><p>QUATRE</p><p style="display:none">CACHÉ</p>');
+    const pdf = await turbopdf.create('<p>UN</p><p style="break-before:page">DEUX</p><p style="page-break-after:always">TROIS</p><p>QUATRE</p><p style="display:none">CACHÉ</p>');
     const t = pageTexts(pdf.toBuffer());
     expect(pdf.pages).toBe(3);
     expect(t[1]).toContain('TROIS');
@@ -101,30 +101,30 @@ describe('HTML + CSS cascade', () => {
       },
       children: [{ content: 'A' }, { content: 'B' }, { content: 'C' }],
     });
-    await expect(papier.create({ tree })).resolves.toMatchObject({ pages: 1, warnings: [] });
+    await expect(turbopdf.create({ tree })).resolves.toMatchObject({ pages: 1, warnings: [] });
   });
 
   it('local stylesheets are read from baseDir, never outside', async () => {
     const { mkdtempSync, symlinkSync, writeFileSync } = await import('node:fs');
     const { join } = await import('node:path');
     const { tmpdir } = await import('node:os');
-    const dir = mkdtempSync(join(tmpdir(), 'papier-css-'));
+    const dir = mkdtempSync(join(tmpdir(), 'turbopdf-css-'));
     writeFileSync(join(dir, 'style.css'), 'p { color: #00ff00 }');
     const tree = await toTree({ html: '<link rel="stylesheet" href="style.css"><p>x</p>', baseDir: dir });
     expect(tree.children[0]!.children[0]).toMatchObject({ style: { color: '#00ff00' } });
-    const pdf = await papier.create({ html: '<link rel="stylesheet" href="../../etc/x.css"><p>x</p>', baseDir: dir });
+    const pdf = await turbopdf.create({ html: '<link rel="stylesheet" href="../../etc/x.css"><p>x</p>', baseDir: dir });
     expect(pdf.warnings[0]).toMatchObject({ type: 'stylesheet_failed', message: expect.stringContaining('outside baseDir') });
-    const outside = mkdtempSync(join(tmpdir(), 'papier-css-outside-'));
+    const outside = mkdtempSync(join(tmpdir(), 'turbopdf-css-outside-'));
     writeFileSync(join(outside, 'secret.css'), 'p { color: #ff0000 }');
     symlinkSync(join(outside, 'secret.css'), join(dir, 'linked.css'));
-    const linked = await papier.create({ html: '<link rel="stylesheet" href="linked.css"><p>x</p>', baseDir: dir });
+    const linked = await turbopdf.create({ html: '<link rel="stylesheet" href="linked.css"><p>x</p>', baseDir: dir });
     expect(linked.warnings[0]).toMatchObject({ type: 'stylesheet_failed', message: expect.stringContaining('outside baseDir') });
   });
 });
 
 describe('components', () => {
   it('document, pages, header / footer and page numbers', async () => {
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       h(Document, { title: 'Rapport', lang: 'fr' },
         h(Page, { header: h(Text, null, 'En-tête {page}/{pages}'), footer: h(PageNumber, { format: 'Page {page} / {pages}' }) },
           h(Heading, null, 'Un'), h(PageBreak), h(Heading, { level: 2 }, 'Deux'))),
@@ -139,7 +139,7 @@ describe('components', () => {
 
   it('a long table repeats its header and never splits a row', async () => {
     const rows = Array.from({ length: 150 }, (_, i) => h(Row, { key: i }, h(Cell, null, h(Text, null, `R${i}x`)), h(Cell, null, h(Text, null, `T${i}y`))));
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       h(Table, { columns: [{ width: 'auto' }, { width: 80, align: 'right' }], cellStyle: { padding: 4 } }, h(Row, { header: true }, h(Cell, null, h(Text, null, 'Article')), h(Cell, null, h(Text, null, 'Prix'))), rows),
     );
     expect(pdf.pages).toBeGreaterThan(2);
@@ -163,7 +163,7 @@ describe('components', () => {
       { type: 'text', content: [{ text: 'Du texte ' }, { text: 'gras', style: { fontWeight: 700 } }, { text: ' ici.' }] },
       { type: 'image', src: { data: PNG_1X1 }, format: 'png', style: { width: 20, height: 20 } },
     ]);
-    const pdf = await papier.create({ tree });
+    const pdf = await turbopdf.create({ tree });
     expect(pdf.warnings).toEqual([]);
   });
 });
@@ -201,7 +201,7 @@ describe('plain React (HTML + inline styles)', () => {
   });
 
   it('never fetches remote images: warns instead', async () => {
-    const pdf = await papier.create(h('img', { src: 'https://example.com/logo.png' }));
+    const pdf = await turbopdf.create(h('img', { src: 'https://example.com/logo.png' }));
     expect(pdf.warnings[0]).toMatchObject({ type: 'image_failed', message: expect.stringContaining('never uses the network') });
   });
     expect(parseCss('width:calc(2in - 12pt); height:min(50vh, 300pt); padding:clamp(4pt, 1rem, 20pt)')).toMatchObject({
@@ -214,7 +214,7 @@ describe('plain React (HTML + inline styles)', () => {
 describe('markdown', () => {
   it('headings, lists, tables, code and page breaks', async () => {
     const md = ['# Titre', '', '- un', '- deux', '', '| A | B |', '|---|--:|', '| 1 | 2 |', '', '```', 'if (x) {', '    y();', '}', '```', '', '<!-- pagebreak -->', '', 'fin'].join('\n');
-    const pdf = await papier.create({ markdown: md });
+    const pdf = await turbopdf.create({ markdown: md });
     expect(pdf.pages).toBe(2);
     const [p1, p2] = pageTexts(pdf.toBuffer());
     expect(p1).toContain('Titre');
@@ -230,7 +230,7 @@ describe('markdown', () => {
 
 describe('results', () => {
   it('previews come from the engine, at the requested scale', async () => {
-    const pdf = await papier.create(h(Text, null, 'Aperçu'));
+    const pdf = await turbopdf.create(h(Text, null, 'Aperçu'));
     const [page] = await pdf.toPng({ scale: 1 });
     expect(page!.width).toBe(596); // 595.28pt rounded up: the whole page is covered
     expect(page!.height).toBe(842);
@@ -239,21 +239,21 @@ describe('results', () => {
   });
 
   it('the same input gives the same bytes', async () => {
-    const make = () => papier.create({ markdown: '# Même\n\nentrée' });
+    const make = () => turbopdf.create({ markdown: '# Même\n\nentrée' });
     expect((await make()).toBuffer().equals((await make()).toBuffer())).toBe(true);
   });
 
   it('engine warnings are explained, and strict turns them into an error', async () => {
-    const pdf = await papier.create(h(Text, { id: 'prix' }, 'prix 漢'));
+    const pdf = await turbopdf.create(h(Text, { id: 'prix' }, 'prix 漢'));
     expect(pdf.warnings).toEqual([expect.objectContaining({ type: 'missing_glyph', path: 'prix', page: 1, message: expect.stringContaining('U+6F22') })]);
-    const err = await papier.create({ react: h(Text, null, '漢'), strict: true }).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(PapierError);
-    expect((err as PapierError).code).toBe('warnings_found');
+    const err = await turbopdf.create({ react: h(Text, null, '漢'), strict: true }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(TurboPdfError);
+    expect((err as TurboPdfError).code).toBe('warnings_found');
   });
 
   it('an invalid tree lists every problem with its path', async () => {
     const tree = { type: 'document', version: 1, children: [{ type: 'page', children: [{ type: 'heading', level: 9, content: 'x' }] }] } as Tree;
-    const err = (await papier.create({ tree }).catch((e: unknown) => e)) as PapierError;
+    const err = (await turbopdf.create({ tree }).catch((e: unknown) => e)) as TurboPdfError;
     expect(err.code).toBe('invalid_tree');
     expect(err.details).toEqual([expect.objectContaining({ path: '/children/0/children/0/level', code: 'invalid_heading_level' })]);
   });
@@ -261,9 +261,9 @@ describe('results', () => {
   it('renders a 200-row table quickly', async () => {
     const rows = Array.from({ length: 200 }, (_, i) => h(Row, { key: i }, h(Cell, null, h(Text, null, `Ligne ${i}`)), h(Cell, null, h(Text, null, String(i * 3)))));
     const doc = h(Table, { columns: [{ width: 'auto' }, { width: 60 }] }, rows);
-    await papier.create(doc); // warm (module load)
+    await turbopdf.create(doc); // warm (module load)
     const t = performance.now();
-    await papier.create(doc);
+    await turbopdf.create(doc);
     expect(performance.now() - t).toBeLessThan(250);
   });
 });

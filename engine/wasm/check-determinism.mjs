@@ -1,11 +1,11 @@
 // Same tree → same PDF bytes, native (napi) vs WebAssembly. Run from engine/ after `npm run build:native`
-// (at the repo root) and `cargo build --release -p papier-wasm --target wasm32-unknown-unknown`.
+// (at the repo root) and `cargo build --release -p turbopdf-wasm --target wasm32-unknown-unknown`.
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { load } from './papier.mjs';
+import { load } from './turbopdf.mjs';
 
-const native = createRequire(import.meta.url)(`../../native/papier.${process.platform}-${process.arch}.node`);
+const native = createRequire(import.meta.url)(`../../native/turbopdf.${process.platform}-${process.arch}.node`);
 const wasm = await load();
 const md5 = (b) => createHash('md5').update(b).digest('hex');
 let failed = 0;

@@ -1,7 +1,7 @@
 import { createElement as h } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Document, Image, Page, Text, View } from '../src/components';
-import papier from '../src/index';
+import turbopdf from '../src/index';
 
 const GIF_1X1 = 'R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
 const raw = (pdf: { toBuffer(): Buffer }) => pdf.toBuffer().toString('latin1');
@@ -25,7 +25,7 @@ const REPORT = `<!doctype html><html lang="fr"><head><title>Rapport</title></hea
 
 describe('tagged PDF', () => {
   it('HTML semantics become the structure tree, by default', async () => {
-    const pdf = await papier.create(REPORT);
+    const pdf = await turbopdf.create(REPORT);
     expect(pdf.warnings).toEqual([]);
     expect(raw(pdf)).toContain('/StructTreeRoot');
     expect(raw(pdf)).toContain('/Marked true');
@@ -49,14 +49,14 @@ describe('tagged PDF', () => {
   });
 
   it('Markdown lists, quotes and code blocks are tagged too', async () => {
-    const pdf = await papier.create({ markdown: '# Notes\n\n- un\n- deux\n\n> cité\n\n```\ncode\n```\n' });
+    const pdf = await turbopdf.create({ markdown: '# Notes\n\n- un\n- deux\n\n> cité\n\n```\ncode\n```\n' });
     expect(count(pdf, '/S/LI')).toBe(2);
     expect(count(pdf, '/S/BlockQuote')).toBe(1);
     expect(count(pdf, '/S/Code')).toBe(1);
   });
 
   it('components take a role', async () => {
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       h(Document, { title: 'Liste' },
         h(Page, null,
           h(View, { role: 'list' }, h(View, { role: 'list_item' }, h(Text, { role: 'list_label' }, '•'), h(View, { role: 'list_body' }, h(Text, null, 'Un')))),
@@ -68,8 +68,8 @@ describe('tagged PDF', () => {
   });
 
   it('tagged: false writes no structure (smaller files)', async () => {
-    const tagged = await papier.create(REPORT);
-    const plain = await papier.create({ html: REPORT, tagged: false });
+    const tagged = await turbopdf.create(REPORT);
+    const plain = await turbopdf.create({ html: REPORT, tagged: false });
     expect(raw(plain)).not.toContain('/StructTreeRoot');
     expect(plain.toBuffer().length).toBeLessThan(tagged.toBuffer().length);
   });
@@ -77,35 +77,35 @@ describe('tagged PDF', () => {
 
 describe('PDF/UA', () => {
   it('pdfua: true gives a PDF/UA-1 document', async () => {
-    const pdf = await papier.create({ html: REPORT, pdfua: true });
+    const pdf = await turbopdf.create({ html: REPORT, pdfua: true });
     expect(pdf.warnings).toEqual([]);
     expect(raw(pdf)).toContain('pdfuaid:part');
     expect(raw(pdf)).toContain('/DisplayDocTitle true');
   });
 
   it('needs a title and a language, and says where to put them', async () => {
-    await expect(papier.create({ html: '<p>x</p>', pdfua: true })).rejects.toMatchObject({
+    await expect(turbopdf.create({ html: '<p>x</p>', pdfua: true })).rejects.toMatchObject({
       code: 'invalid_source',
       message: expect.stringMatching(/title.*<title>.*language.*<html lang/),
     });
-    const pdf = await papier.create({ html: '<p>x</p>', pdfua: true, title: 'Note', lang: 'fr' });
+    const pdf = await turbopdf.create({ html: '<p>x</p>', pdfua: true, title: 'Note', lang: 'fr' });
     expect(raw(pdf)).toContain('pdfuaid:part');
   });
 
   it('Markdown: the first # heading is the title', async () => {
-    const pdf = await papier.create({ markdown: '# Compte rendu\n\ntexte', pdfua: true, lang: 'fr' });
+    const pdf = await turbopdf.create({ markdown: '# Compte rendu\n\ntexte', pdfua: true, lang: 'fr' });
     expect(raw(pdf)).toContain('Compte rendu');
     expect(raw(pdf)).toContain('pdfuaid:part');
   });
 
   it('an image without alt is made decorative, with a missing_alt warning', async () => {
-    const pdf = await papier.create({ html: `<title>T</title><img id="photo" src="data:image/gif;base64,${GIF_1X1}" width="20">`, pdfua: true, lang: 'fr' });
+    const pdf = await turbopdf.create({ html: `<title>T</title><img id="photo" src="data:image/gif;base64,${GIF_1X1}" width="20">`, pdfua: true, lang: 'fr' });
     expect(pdf.warnings).toEqual([expect.objectContaining({ type: 'missing_alt', path: 'photo', page: 1, message: expect.stringContaining('alt=') })]);
     expect(count(pdf, '/S/Figure')).toBe(0);
   });
 
   it('a character no font has makes conformance impossible: not_accessible', async () => {
-    await expect(papier.create({ html: '<title>T</title><p>漢字</p>', pdfua: true, lang: 'fr' })).rejects.toMatchObject({
+    await expect(turbopdf.create({ html: '<title>T</title><p>漢字</p>', pdfua: true, lang: 'fr' })).rejects.toMatchObject({
       code: 'not_accessible',
       details: [expect.stringContaining('characters in no font: 漢 字')],
     });

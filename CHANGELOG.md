@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
-Papier no longer uses a browser: every source is rendered by a Rust engine.
+TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Added
 
@@ -16,8 +16,8 @@ Papier no longer uses a browser: every source is rendered by a Rust engine.
   `baseDir`), the `css` option and inline styles; type / class / id / attribute / descendant / child selectors,
   `:first-child`, `:last-child`, `:nth-child()`, specificity, `!important`, `@media print`, `@page` size and margin.
   `<title>` and `<html lang>` fill the PDF metadata.
-- `tree` source: render a document tree directly (types exported from `papier/tree`).
-- `papier/components`: `Document`, `Page`, `View`, `Text`, `Span`, `Heading`, `Image`, `Table`, `Row`, `Cell`,
+- `tree` source: render a document tree directly (types exported from `turbopdf/tree`).
+- `turbopdf/components`: `Document`, `Page`, `View`, `Text`, `Span`, `Heading`, `Image`, `Table`, `Row`, `Cell`,
   `PageBreak`, `PageNumber`, `KeepTogether`, `Spacer`, `Divider`.
 - Clickable links: `<a href>` (URL or `#id`, around text or a whole block), `<Link>`, `link` on `Span` / `View` /
   `Image`, Markdown links with GitHub-style heading ids. Only `http(s):`, `mailto:`, `tel:`, `ftp:` are clickable.
@@ -33,7 +33,7 @@ Papier no longer uses a browser: every source is rendered by a Rust engine.
 - **`pdf.preview()` now returns the document as HTML/CSS** (`{ style, pages: [{ page, width, height, html }],
   toHtml(), toResponse(), save() }`): real text and fonts, working links, same layout as the PDF, for every
   source. **Breaking:** the PNG images moved to `pdf.toPng({ scale })` (same `PngPage` objects as before;
-  `PreviewOptions` is now `PngOptions`). New engine crate `papier-html`. Its fonts are light WOFF files
+  `PreviewOptions` is now `PngOptions`). New engine crate `turbopdf-html`. Its fonts are light WOFF files
   (only the glyphs used keep their outlines; kerning and ligatures kept): ~1.2 MB → ~250 KB per document.
 - **QR codes**, drawn as vector shapes: `<img src="qr:…">` (HTML), `![alt](qr:…)` (Markdown), `<QR value />`
   (React), `{ "src": { "qr": "…", "ecc", "color", "background" } }` (tree). New `ImageSource` type in the tree.
@@ -51,7 +51,7 @@ Papier no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Removed (breaking)
 
-- Chromium and Playwright: no `npx papier install`, no browser process.
+- Chromium and Playwright: no `npx turbopdf install`, no browser process.
 - The `url` source: fetch the page yourself and pass `{ html, baseDir }`.
 - Options `printBackground`, `media`, `javascript`, `headers`, `cookies`, `allowHosts`, `allowFileUrls`,
   `blockPrivateNetwork` and `deterministic` (output is always deterministic; backgrounds always printed). Passing
@@ -66,19 +66,19 @@ First release: **create**, **download**, **preview**.
 
 ### Added
 
-- `papier.create()` from HTML, a React element, a URL or Markdown (GitHub flavored, print stylesheet, syntax highlighting, `<!-- pagebreak -->`).
+- `turbopdf.create()` from HTML, a React element, a URL or Markdown (GitHub flavored, print stylesheet, syntax highlighting, `<!-- pagebreak -->`).
 - Options: `format`, `orientation`, `width` / `height`, `margin`, `printBackground`, `media`, `css`, `header` / `footer` (`{page}`, `{pages}`), `fonts`, `headers`, `cookies`, `timeout`, `strict`, `deterministic`, `signal`.
 - Output: `save()`, `toBuffer()`, `toStream()`, `toResponse()`, `pages`, `warnings`.
 - `pdf.preview()`: one PNG per page rendered from the final PDF, with `save()`, `toBuffer()` and `toDataUrl()`.
-- Fidelity by default: waits for fonts, images (lazy ones included) and network; lays out at the real page width; prints backgrounds; avoids cutting rows, images and headings; repeats table headers; `.papier-break-before`, `.papier-break-after`, `.papier-keep-together`.
+- Fidelity by default: waits for fonts, images (lazy ones included) and network; lays out at the real page width; prints backgrounds; avoids cutting rows, images and headings; repeats table headers; `.turbopdf-break-before`, `.turbopdf-break-after`, `.turbopdf-keep-together`.
 - Warnings: `font_fallback`, `image_failed`, `overflow`.
 - Browser lifecycle: shared Chromium, one isolated context per PDF, `concurrency` limit, `keepAlive`, `warmup()`, `close()`.
 - Security options: `javascript`, `allowHosts`, `blockPrivateNetwork`, `allowFileUrls` (`file://` is refused by default).
-- `PapierError` with codes `invalid_source`, `render_timeout`, `render_failed`, `react_not_installed`, `warnings_found`, `aborted`.
-- CLI: `papier dev <file>` (live preview of `.tsx`, `.html`, `.md`) and `papier install`.
+- `TurboPdfError` with codes `invalid_source`, `render_timeout`, `render_failed`, `react_not_installed`, `warnings_found`, `aborted`.
+- CLI: `turbopdf dev <file>` (live preview of `.tsx`, `.html`, `.md`) and `turbopdf install`.
 - ESM and CommonJS builds with types.
 
 ### Notes
 
 - **Requires Node.js 20+.** The initial goal was Node 18, but Playwright (>= 1.5x) requires Node 20.
-- `javascript: false` is enforced with a Content-Security-Policy rather than by disabling JavaScript in the browser, because Papier needs to run code in the page to wait for fonts and images.
+- `javascript: false` is enforced with a Content-Security-Policy rather than by disabling JavaScript in the browser, because TurboPDF needs to run code in the page to wait for fonts and images.

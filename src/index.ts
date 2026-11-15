@@ -3,8 +3,8 @@ import { close, configure, warmup } from './queue';
 
 export { create } from './create';
 export { close, configure, warmup } from './queue';
-export { PapierError } from './errors';
-export type { PapierErrorCode } from './errors';
+export { TurboPdfError } from './errors';
+export type { TurboPdfErrorCode } from './errors';
 export type { Watermark } from './tree';
 export type {
   ConfigureOptions,
@@ -23,5 +23,5 @@ export type {
   Warning,
 } from './types';
 
-const papier = { create, close, configure, warmup };
-export default papier;
+const turbopdf = { create, close, configure, warmup };
+export default turbopdf;

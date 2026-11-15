@@ -14,7 +14,7 @@ describe('document tree types (generated from Rust)', () => {
         {
           type: 'page',
           children: [
-            { type: 'heading', level: 1, content: 'Hello Papier' },
+            { type: 'heading', level: 1, content: 'Hello TurboPDF' },
             { type: 'text', content: 'What you see is what you download.' },
           ],
         },

@@ -9,7 +9,7 @@ export default defineConfig([
     shims: true, // import.meta.url / __dirname in both formats (native module lookup)
     target: 'node20',
     external: ['react', 'react-dom', 'react-dom/server'],
-    // `require('papier')` returns the API itself (with .create / .default), not just { default }
+    // `require('turbopdf')` returns the API itself (with .create / .default), not just { default }
     footer: ({ format }) => (format === 'cjs' ? { js: 'if (module.exports.default) module.exports = Object.assign(module.exports.default, module.exports);' } : {}),
   },
   {

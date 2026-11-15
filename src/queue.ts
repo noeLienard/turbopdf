@@ -1,4 +1,4 @@
-import { PapierError } from './errors';
+import { TurboPdfError } from './errors';
 import { loadNative } from './rust/native';
 import type { ConfigureOptions } from './types';
 
@@ -19,9 +19,9 @@ export function holdSlotUntil<T>(visible: Promise<T>, completion: Promise<unknow
 
 export function configure(options: ConfigureOptions): void {
   const known = new Set(['concurrency', 'keepAlive']);
-  for (const key of Object.keys(options)) if (!known.has(key)) throw new PapierError('invalid_source', `Unknown option "${key}" for configure(). Use: concurrency.`);
+  for (const key of Object.keys(options)) if (!known.has(key)) throw new TurboPdfError('invalid_source', `Unknown option "${key}" for configure(). Use: concurrency.`);
   if (options.concurrency !== undefined) {
-    if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new PapierError('invalid_source', '`concurrency` must be an integer >= 1.');
+    if (!Number.isInteger(options.concurrency) || options.concurrency < 1) throw new TurboPdfError('invalid_source', '`concurrency` must be an integer >= 1.');
     concurrency = options.concurrency;
     drain();
   }
@@ -47,7 +47,7 @@ export async function withSlot<T>(signal: AbortSignal | undefined, work: () => P
       const onAbort = () => {
         const i = queue.indexOf(start);
         if (i >= 0) queue.splice(i, 1);
-        reject(new PapierError('aborted', 'Rendering was aborted while waiting for a free slot.'));
+        reject(new TurboPdfError('aborted', 'Rendering was aborted while waiting for a free slot.'));
       };
       signal?.addEventListener('abort', onAbort, { once: true });
       queue.push(start);

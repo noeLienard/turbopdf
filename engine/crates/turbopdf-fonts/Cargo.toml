@@ -1,0 +1,12 @@
+[package]
+name = "turbopdf-fonts"
+description = "Font database: embedded Inter, loading from bytes/files, fallback chain, subsetting."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+turbopdf-tree.workspace = true
+thiserror.workspace = true
+rustybuzz.workspace = true
+base64.workspace = true

@@ -1,4 +1,4 @@
-import { PapierError } from './errors';
+import { TurboPdfError } from './errors';
 import type { Format, Margin, Orientation } from './types';
 
 /** Portrait size in millimetres. */
@@ -18,7 +18,7 @@ const UNITS_PX: Record<string, number> = { px: 1, in: 96, cm: 96 / 2.54, mm: 96 
 export function toPx(value: string | number): number {
   if (typeof value === 'number') return value;
   const m = /^\s*(-?\d*\.?\d+)\s*(px|in|cm|mm|pt|pc)?\s*$/i.exec(value);
-  if (!m) throw new PapierError('invalid_source', `Invalid length "${value}". Use a CSS length such as '15mm', '1in' or '20px'.`);
+  if (!m) throw new TurboPdfError('invalid_source', `Invalid length "${value}". Use a CSS length such as '15mm', '1in' or '20px'.`);
   return Number(m[1]) * UNITS_PX[(m[2] ?? 'px').toLowerCase()]!;
 }
 

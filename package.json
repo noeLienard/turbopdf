@@ -1,16 +1,16 @@
 {
-  "name": "papier",
+  "name": "turbopdf",
   "version": "0.1.0",
-  "description": "Generate PDFs from HTML, React or Markdown with a Rust engine: milliseconds, no browser, no network. Create, download, preview.",
+  "description": "HTML, React or Markdown to PDF in milliseconds. Native Rust engine: no browser, no network, byte-identical output, PDF/UA.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/noeLienard/papier.git"
+    "url": "git+https://github.com/noeLienard/turbopdf.git"
   },
   "bugs": {
-    "url": "https://github.com/noeLienard/papier/issues"
+    "url": "https://github.com/noeLienard/turbopdf/issues"
   },
-  "homepage": "https://github.com/noeLienard/papier#readme",
+  "homepage": "https://github.com/noeLienard/turbopdf#readme",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -48,7 +48,7 @@
     }
   },
   "bin": {
-    "papier": "./dist/cli.js"
+    "turbopdf": "./dist/cli.js"
   },
   "files": [
     "dist",
@@ -61,13 +61,19 @@
     "node": ">=20"
   },
   "keywords": [
-    "html-to-pdf",
-    "markdown",
-    "napi",
     "pdf",
-    "preview",
-    "react",
-    "rust"
+    "html-to-pdf",
+    "react-pdf",
+    "markdown-to-pdf",
+    "pdf-generation",
+    "puppeteer-alternative",
+    "invoice",
+    "qr-code",
+    "pdf-ua",
+    "accessibility",
+    "nextjs",
+    "rust",
+    "napi"
   ],
   "scripts": {
     "build": "tsup",
@@ -77,7 +83,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:tree": "cargo test --manifest-path engine/Cargo.toml -p papier-tree --features ts && cp engine/crates/papier-tree/bindings/tree.ts src/tree.ts",
+    "gen:tree": "cargo test --manifest-path engine/Cargo.toml -p turbopdf-tree --features ts && cp engine/crates/turbopdf-tree/bindings/tree.ts src/tree.ts",
     "build:native": "node scripts/build-native.mjs"
   },
   "peerDependencies": {

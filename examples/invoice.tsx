@@ -1,4 +1,4 @@
-// npx papier dev examples/invoice.tsx
+// npx turbopdf dev examples/invoice.tsx
 // The default export is a React component. Optionally export `options` to set format, margin…
 
 const lines = [

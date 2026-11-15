@@ -1,16 +1,16 @@
 [workspace]
 resolver = "3"
 members = [
-  "crates/papier-tree",
-  "crates/papier-fonts",
-  "crates/papier-text",
-  "crates/papier-layout",
-  "crates/papier-pdf",
-  "crates/papier-raster",
-  "crates/papier-html",
-  "crates/papier-engine",
-  "crates/papier-node",
-  "crates/papier-wasm",
+  "crates/turbopdf-tree",
+  "crates/turbopdf-fonts",
+  "crates/turbopdf-text",
+  "crates/turbopdf-layout",
+  "crates/turbopdf-pdf",
+  "crates/turbopdf-raster",
+  "crates/turbopdf-html",
+  "crates/turbopdf-engine",
+  "crates/turbopdf-node",
+  "crates/turbopdf-wasm",
 ]
 
 [workspace.package]
@@ -18,18 +18,18 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
-repository = "https://github.com/papier-dev/papier"
+repository = "https://github.com/turbopdf-dev/turbopdf"
 
 [workspace.dependencies]
 # interne
-papier-tree   = { path = "crates/papier-tree" }
-papier-fonts  = { path = "crates/papier-fonts" }
-papier-text   = { path = "crates/papier-text" }
-papier-layout = { path = "crates/papier-layout" }
-papier-pdf    = { path = "crates/papier-pdf" }
-papier-raster = { path = "crates/papier-raster" }
-papier-html = { path = "crates/papier-html" }
-papier-engine = { path = "crates/papier-engine" }
+turbopdf-tree   = { path = "crates/turbopdf-tree" }
+turbopdf-fonts  = { path = "crates/turbopdf-fonts" }
+turbopdf-text   = { path = "crates/turbopdf-text" }
+turbopdf-layout = { path = "crates/turbopdf-layout" }
+turbopdf-pdf    = { path = "crates/turbopdf-pdf" }
+turbopdf-raster = { path = "crates/turbopdf-raster" }
+turbopdf-html = { path = "crates/turbopdf-html" }
+turbopdf-engine = { path = "crates/turbopdf-engine" }
 
 # données
 serde      = { version = "1", features = ["derive"] }

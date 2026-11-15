@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import papier from '../src/index';
+import turbopdf from '../src/index';
 import { pageTexts } from './helpers';
 
 function Invoice({ customer }: { customer: string }) {
@@ -9,12 +9,12 @@ function Invoice({ customer }: { customer: string }) {
 
 describe('react', () => {
   it('create(<Element />) shorthand', async () => {
-    const pdf = await papier.create(createElement(Invoice, { customer: 'Acme' }));
+    const pdf = await turbopdf.create(createElement(Invoice, { customer: 'Acme' }));
     expect(pageTexts(pdf.toBuffer())[0]).toContain('Client : Acme');
   });
 
   it('create({ react })', async () => {
-    const pdf = await papier.create({ react: createElement(Invoice, { customer: 'Globex' }), format: 'A5' });
+    const pdf = await turbopdf.create({ react: createElement(Invoice, { customer: 'Globex' }), format: 'A5' });
     expect(pageTexts(pdf.toBuffer())[0]).toContain('Client : Globex');
   });
 
@@ -22,10 +22,10 @@ describe('react', () => {
     const Boom = () => {
       throw new Error('kaboom');
     };
-    await expect(papier.create({ react: createElement(Boom) })).rejects.toMatchObject({ code: 'render_failed' });
+    await expect(turbopdf.create({ react: createElement(Boom) })).rejects.toMatchObject({ code: 'render_failed' });
   });
 
   it('rejects something that is not an element', async () => {
-    await expect(papier.create({ react: { nope: true } as never })).rejects.toMatchObject({ code: 'invalid_source' });
+    await expect(turbopdf.create({ react: { nope: true } as never })).rejects.toMatchObject({ code: 'invalid_source' });
   });
 });

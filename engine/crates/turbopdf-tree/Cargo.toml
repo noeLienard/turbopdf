@@ -1,0 +1,17 @@
+[package]
+name = "turbopdf-tree"
+description = "Document tree of the TurboPDF engine: types, serde, validation. Source of truth for the TypeScript types."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# génère les types TypeScript (src/tree.ts) pendant `cargo test`
+ts = ["dep:ts-rs"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ts-rs = { workspace = true, optional = true }

@@ -1,11 +1,11 @@
-# Contributing to Papier
+# Contributing to TurboPDF
 
-Thanks for helping. Papier is small on purpose: **create, download, preview**. Features outside that scope (templates, a cloud API, webhooks) are out of scope.
+Thanks for helping. TurboPDF is small on purpose: **create, download, preview**. Features outside that scope (templates, a cloud API, webhooks) are out of scope.
 
 ## Setup
 
 ```bash
-git clone <repo> && cd papier
+git clone <repo> && cd turbopdf
 npm install
 npm run build:native      # builds the Rust engine into native/ (needs Rust: https://rustup.rs)
 ```
@@ -31,15 +31,15 @@ src/index.ts       public API: default export + named exports
 src/create.ts      option validation, the Pdf object
 src/queue.ts       concurrency limit, warmup()
 src/preview.ts     PNG pages from the engine
-src/components.ts  papier/components (React → document tree)
-src/tree.ts        papier/tree types (generated from engine/crates/papier-tree)
+src/components.ts  turbopdf/components (React → document tree)
+src/tree.ts        turbopdf/tree types (generated from engine/crates/turbopdf-tree)
 src/rust/engine.ts source → document tree → native render, warnings
 src/rust/markup.ts HTML / React markup → document tree
 src/rust/cascade.ts CSS selectors, specificity, @media, @page
 src/rust/css.ts    CSS declarations → tree styles
 src/rust/markdown.ts Markdown → document tree
-src/rust/native.ts loads native/papier.<platform>-<arch>.node
-src/cli/           `papier dev`
+src/rust/native.ts loads native/turbopdf.<platform>-<arch>.node
+src/cli/           `turbopdf dev`
 engine/            the Rust engine (see engine/README.md)
 test/              one file per theme (options, fonts, pagebreak, warnings…)
 ```
@@ -47,7 +47,7 @@ test/              one file per theme (options, fonts, pagebreak, warnings…)
 ## Conventions
 
 - **TypeScript strict.** Every public option is typed and documented with a JSDoc comment (it shows in the editor).
-- **Errors are `PapierError`** with a `code` and a message that says *what to do*, not only what went wrong.
+- **Errors are `TurboPdfError`** with a `code` and a message that says *what to do*, not only what went wrong.
 - **Warnings are returned, never thrown.** A render should still give a PDF.
 - **Every option has a test.** Prove behavior on the PDF itself (page count, text per page, pixels), not on internal state. Helpers are in `test/helpers.ts`.
 - A bug fix starts with a failing test.

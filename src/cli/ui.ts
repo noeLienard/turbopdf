@@ -1,10 +1,10 @@
-/** The single-page UI served by `papier dev`. */
+/** The single-page UI served by `turbopdf dev`. */
 export const UI_HTML = /* html */ `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>papier dev</title>
+<title>turbopdf dev</title>
 <style>
   :root { --bg:#f4f4f5; --card:#fff; --line:#e4e4e7; --text:#18181b; --muted:#71717a; --ok:#16a34a; --warn:#d97706; --err:#dc2626; }
   * { box-sizing:border-box; }
@@ -37,7 +37,7 @@ export const UI_HTML = /* html */ `<!doctype html>
 </head>
 <body>
 <header>
-  <span class="logo">papier</span>
+  <span class="logo">turbopdf</span>
   <span class="file grow" id="file"></span>
   <span class="pill busy" id="status"><span class="dot"></span><span id="statusText">Rendering…</span></span>
   <span class="pill" id="count" hidden></span>

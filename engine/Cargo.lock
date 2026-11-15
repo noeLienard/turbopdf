@@ -629,137 +629,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "papier-engine"
-version = "0.1.0"
-dependencies = [
- "base64",
- "flate2",
- "papier-fonts",
- "papier-html",
- "papier-layout",
- "papier-pdf",
- "papier-raster",
- "papier-text",
- "papier-tree",
- "rqrr",
- "serde_json",
- "thiserror",
- "tiny-skia",
- "ttf-parser",
-]
-
-[[package]]
-name = "papier-fonts"
-version = "0.1.0"
-dependencies = [
- "base64",
- "papier-tree",
- "rustybuzz",
- "thiserror",
-]
-
-[[package]]
-name = "papier-html"
-version = "0.1.0"
-dependencies = [
- "base64",
- "flate2",
- "papier-fonts",
- "papier-layout",
- "papier-text",
- "papier-tree",
-]
-
-[[package]]
-name = "papier-layout"
-version = "0.1.0"
-dependencies = [
- "base64",
- "hypher",
- "image-webp",
- "jpeg-decoder",
- "papier-fonts",
- "papier-text",
- "papier-tree",
- "qrcodegen",
- "rustybuzz",
- "taffy",
- "thiserror",
- "usvg",
-]
-
-[[package]]
-name = "papier-node"
-version = "0.1.0"
-dependencies = [
- "napi",
- "napi-build",
- "napi-derive",
- "papier-engine",
- "serde_json",
-]
-
-[[package]]
-name = "papier-pdf"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "krilla",
- "krilla-svg",
- "papier-fonts",
- "papier-layout",
- "papier-text",
- "papier-tree",
- "rustybuzz",
- "thiserror",
-]
-
-[[package]]
-name = "papier-raster"
-version = "0.1.0"
-dependencies = [
- "gif",
- "image-webp",
- "jpeg-decoder",
- "papier-fonts",
- "papier-layout",
- "papier-text",
- "papier-tree",
- "resvg",
- "rustybuzz",
- "thiserror",
- "tiny-skia",
-]
-
-[[package]]
-name = "papier-text"
-version = "0.1.0"
-dependencies = [
- "hypher",
- "papier-fonts",
- "papier-tree",
- "rustybuzz",
-]
-
-[[package]]
-name = "papier-tree"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror",
- "ts-rs",
-]
-
-[[package]]
-name = "papier-wasm"
-version = "0.1.0"
-dependencies = [
- "papier-engine",
- "serde_json",
-]
-
-[[package]]
 name = "pdf-writer"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1205,6 +1074,137 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 dependencies = [
  "core_maths",
+]
+
+[[package]]
+name = "turbopdf-engine"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "flate2",
+ "rqrr",
+ "serde_json",
+ "thiserror",
+ "tiny-skia",
+ "ttf-parser",
+ "turbopdf-fonts",
+ "turbopdf-html",
+ "turbopdf-layout",
+ "turbopdf-pdf",
+ "turbopdf-raster",
+ "turbopdf-text",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-fonts"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "rustybuzz",
+ "thiserror",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-html"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "flate2",
+ "turbopdf-fonts",
+ "turbopdf-layout",
+ "turbopdf-text",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-layout"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "hypher",
+ "image-webp",
+ "jpeg-decoder",
+ "qrcodegen",
+ "rustybuzz",
+ "taffy",
+ "thiserror",
+ "turbopdf-fonts",
+ "turbopdf-text",
+ "turbopdf-tree",
+ "usvg",
+]
+
+[[package]]
+name = "turbopdf-node"
+version = "0.1.0"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "serde_json",
+ "turbopdf-engine",
+]
+
+[[package]]
+name = "turbopdf-pdf"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "krilla",
+ "krilla-svg",
+ "rustybuzz",
+ "thiserror",
+ "turbopdf-fonts",
+ "turbopdf-layout",
+ "turbopdf-text",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-raster"
+version = "0.1.0"
+dependencies = [
+ "gif",
+ "image-webp",
+ "jpeg-decoder",
+ "resvg",
+ "rustybuzz",
+ "thiserror",
+ "tiny-skia",
+ "turbopdf-fonts",
+ "turbopdf-layout",
+ "turbopdf-text",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-text"
+version = "0.1.0"
+dependencies = [
+ "hypher",
+ "rustybuzz",
+ "turbopdf-fonts",
+ "turbopdf-tree",
+]
+
+[[package]]
+name = "turbopdf-tree"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "ts-rs",
+]
+
+[[package]]
+name = "turbopdf-wasm"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "turbopdf-engine",
 ]
 
 [[package]]

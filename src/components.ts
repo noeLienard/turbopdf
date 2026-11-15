@@ -1,8 +1,8 @@
 // React components that map 1:1 to the document tree of the Rust engine.
 //
-//   import { Document, Page, View, Text, Table, Row, Cell, PageNumber } from 'papier/components';
+//   import { Document, Page, View, Text, Table, Row, Cell, PageNumber } from 'turbopdf/components';
 //
-// They render custom elements carrying their props as JSON; papier turns that markup into the tree.
+// They render custom elements carrying their props as JSON; turbopdf turns that markup into the tree.
 // Hooks, context and your own components work as usual: React does the rendering.
 import { createElement, type ReactNode } from 'react';
 import { imageBytes, imageSource } from './rust/images';
@@ -36,7 +36,7 @@ export interface DocumentProps extends Children {
 
 /** Root of the document: metadata, and one or more `<Page>`. */
 export function Document({ children, ...meta }: DocumentProps) {
-  return el('papier-document', meta, children);
+  return el('turbopdf-document', meta, children);
 }
 
 export interface PageProps extends Children {
@@ -58,10 +58,10 @@ export interface PageProps extends Children {
 /** A section of pages sharing size, margins, header and footer. Content flows over as many pages as needed. */
 export function Page({ children, header, footer, watermark, ...props }: PageProps) {
   const stamp = typeof watermark === 'string' ? { text: watermark } : watermark;
-  return el('papier-page', { ...props, watermark: stamp }, [
-    createElement('papier-header', { key: 'h' }, header),
-    createElement('papier-footer', { key: 'f' }, footer),
-    createElement('papier-body', { key: 'b' }, children),
+  return el('turbopdf-page', { ...props, watermark: stamp }, [
+    createElement('turbopdf-header', { key: 'h' }, header),
+    createElement('turbopdf-footer', { key: 'f' }, footer),
+    createElement('turbopdf-body', { key: 'b' }, children),
   ]);
 }
 
@@ -78,7 +78,7 @@ export interface ViewProps extends Children {
 
 /** A flexbox container (column by default). */
 export function View({ children, ...props }: ViewProps) {
-  return el('papier-view', props, children);
+  return el('turbopdf-view', props, children);
 }
 
 export interface TextProps extends Children {
@@ -91,17 +91,17 @@ export interface TextProps extends Children {
 
 /** A paragraph. Strings, numbers, `<Span>`, `<b>`, `<i>` and `<br/>` inside. */
 export function Text({ children, ...props }: TextProps) {
-  return el('papier-text', props, children);
+  return el('turbopdf-text', props, children);
 }
 
 /** A styled run inside a `<Text>`. `link`: a URL or `#id` of a node of the document. */
 export function Span({ children, style, link }: Children & { style?: TextStyle; link?: string }) {
-  return el('papier-span', { style, link }, children);
+  return el('turbopdf-span', { style, link }, children);
 }
 
 /** A clickable run inside a `<Text>`: a URL (`https:`, `mailto:`…) or `#id` of a node of the document. */
 export function Link({ children, href, style }: Children & { href: string; style?: TextStyle & { color?: Color } }) {
-  return el('papier-span', { style: { color: '#2563eb', ...style }, link: href }, children);
+  return el('turbopdf-span', { style: { color: '#2563eb', ...style }, link: href }, children);
 }
 
 export interface HeadingProps extends Omit<TextProps, 'role'> {
@@ -112,7 +112,7 @@ export interface HeadingProps extends Omit<TextProps, 'role'> {
 }
 
 export function Heading({ children, level = 1, ...props }: HeadingProps) {
-  return el('papier-heading', { level, ...props }, children);
+  return el('turbopdf-heading', { level, ...props }, children);
 }
 
 export interface ImageProps {
@@ -130,7 +130,7 @@ export interface ImageProps {
 /** A PNG, JPEG, WebP, GIF or SVG image (SVG stays vector in the PDF). Never fetched from the network. */
 export function Image({ src, ...props }: ImageProps) {
   const { src: source, format } = typeof src === 'string' ? imageSource(src) : imageBytes(src);
-  return el('papier-image', { src: source, format, ...props });
+  return el('turbopdf-image', { src: source, format, ...props });
 }
 
 export interface QRProps {
@@ -158,7 +158,7 @@ export interface QRProps {
  */
 export function QR({ value, size = 90, ecc, color, background, style, ...props }: QRProps) {
   const src = { qr: value, ecc, color, background }; // undefined fields are dropped by JSON
-  return el('papier-image', { src, ...props, style: { width: size, height: size, ...style } });
+  return el('turbopdf-image', { src, ...props, style: { width: size, height: size, ...style } });
 }
 
 export interface TableProps extends Children {
@@ -176,20 +176,20 @@ export interface TableProps extends Children {
 
 /** A table: `<Row header>` rows first, then `<Row>`s. Rows are never split across pages. */
 export function Table({ children, ...props }: TableProps) {
-  return el('papier-table', props, children);
+  return el('turbopdf-table', props, children);
 }
 
 export function Row({ children, ...props }: Children & { header?: boolean; style?: Style; id?: string }) {
-  return el('papier-row', props, children);
+  return el('turbopdf-row', props, children);
 }
 
 export function Cell({ children, ...props }: Children & { colSpan?: number; style?: Style }) {
-  return el('papier-cell', props, children);
+  return el('turbopdf-cell', props, children);
 }
 
 /** Force a page break. */
 export function PageBreak({ id }: { id?: string } = {}) {
-  return el('papier-pagebreak', { id });
+  return el('turbopdf-pagebreak', { id });
 }
 
 /**
@@ -197,7 +197,7 @@ export function PageBreak({ id }: { id?: string } = {}) {
  * With `target` (the `id` of a node), `{page}` is the page where that node starts: `see page 4`.
  */
 export function PageNumber(props: { format?: string; target?: string; style?: Style; id?: string }) {
-  return el('papier-pagenumber', props);
+  return el('turbopdf-pagenumber', props);
 }
 
 export interface TableOfContentsProps {
@@ -211,7 +211,7 @@ export interface TableOfContentsProps {
 
 /** One line per heading of the document with its page number; each line links to its heading. */
 export function TableOfContents(props: TableOfContentsProps) {
-  return el('papier-toc', props);
+  return el('turbopdf-toc', props);
 }
 
 /** Keep its content on one page. */

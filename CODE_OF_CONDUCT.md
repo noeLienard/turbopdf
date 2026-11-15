@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We pledge to make participation in Papier welcoming and harassment-free for everyone, regardless of identity,
+We pledge to make participation in TurboPDF welcoming and harassment-free for everyone, regardless of identity,
 experience level, background or personal characteristics.
 
 ## Expected behaviour

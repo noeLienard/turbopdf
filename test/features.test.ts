@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createElement as h } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Document, Heading, Image, Link, Page, PageBreak, PageNumber, QR, TableOfContents, Text, View } from '../src/components';
-import papier from '../src/index';
+import turbopdf from '../src/index';
 import { toTree } from '../src/rust/engine';
 import { FONT_GLYPH, FONT_PATH, outline, pageLinks, pageTexts, pdfHas, pixelAt } from './helpers';
 
@@ -15,11 +15,11 @@ const GIF_1X1 = 'R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
 const SVG = '<svg width="120" height="40" viewBox="0 0 120 40"><rect width="120" height="40" fill="#2563eb"/></svg>';
 
 const near = (got: number[], want: number[], tol = 12) => got.forEach((v, i) => expect(Math.abs(v - want[i]!), `channel ${i}: ${got} vs ${want}`).toBeLessThanOrEqual(tol));
-const tmp = () => mkdtempSync(join(tmpdir(), 'papier-feat-'));
+const tmp = () => mkdtempSync(join(tmpdir(), 'turbopdf-feat-'));
 
 describe('links', () => {
   it('<a href> to a URL and to an #id are clickable', async () => {
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       '<p>Voir <a href="https://example.com/doc">le site</a> et <a href="#annexe">l\'annexe</a>.</p><h2 id="annexe" style="break-before:page">Annexe</h2>',
     );
     const [first] = pageLinks(pdf.toBuffer());
@@ -42,13 +42,13 @@ describe('links', () => {
   });
 
   it('a link to a missing id is a broken_link warning; javascript: links are never clickable', async () => {
-    const pdf = await papier.create('<p><a href="#nope">perdu</a> <a href="javascript:alert(1)">script</a></p>');
+    const pdf = await turbopdf.create('<p><a href="#nope">perdu</a> <a href="javascript:alert(1)">script</a></p>');
     expect(pdf.warnings).toEqual([expect.objectContaining({ type: 'broken_link', path: '#nope', page: 1, message: expect.stringContaining('id="nope"') })]);
     expect(pageLinks(pdf.toBuffer())[0]).toEqual([]);
   });
 
   it('Markdown links work, including #anchors to headings (GitHub-style ids)', async () => {
-    const pdf = await papier.create({ markdown: '[le site](https://example.com) · [les tarifs](#mes-tarifs-2026)\n\n<!-- pagebreak -->\n\n## Mes Tarifs 2026\n' });
+    const pdf = await turbopdf.create({ markdown: '[le site](https://example.com) · [les tarifs](#mes-tarifs-2026)\n\n<!-- pagebreak -->\n\n## Mes Tarifs 2026\n' });
     const links = pageLinks(pdf.toBuffer())[0]!;
     expect(links.map((l) => l.external)).toEqual([true, false]);
     expect(links[1]!.target).toBe(1);
@@ -56,7 +56,7 @@ describe('links', () => {
   });
 
   it('Markdown links to accented headings work (markdown-it percent-encodes them)', async () => {
-    const pdf = await papier.create({ markdown: '[voir](#résumé-détaillé)\n\n<!-- pagebreak -->\n\n## Résumé détaillé\n' });
+    const pdf = await turbopdf.create({ markdown: '[voir](#résumé-détaillé)\n\n<!-- pagebreak -->\n\n## Résumé détaillé\n' });
     expect(pdf.warnings).toEqual([]);
     expect(pageLinks(pdf.toBuffer())[0]![0]!.target).toBe(1);
   });
@@ -66,7 +66,7 @@ describe('bookmarks and table of contents', () => {
   const report = '<h1>Rapport</h1><h2>Ventes</h2><h2 style="break-before:page">Coûts</h2><h3>Détail</h3><h4>trop fin</h4>';
 
   it('h1–h3 become nested PDF bookmarks', async () => {
-    const pdf = await papier.create(report);
+    const pdf = await turbopdf.create(report);
     expect(outline(pdf.toBuffer())).toEqual([
       {
         title: 'Rapport',
@@ -80,11 +80,11 @@ describe('bookmarks and table of contents', () => {
   });
 
   it('bookmarks: false turns them off', async () => {
-    expect(outline((await papier.create({ html: report, bookmarks: false })).toBuffer())).toEqual([]);
+    expect(outline((await turbopdf.create({ html: report, bookmarks: false })).toBuffer())).toEqual([]);
   });
 
   it('<!-- toc --> in Markdown: headings with page numbers, each line linked', async () => {
-    const pdf = await papier.create({ markdown: '# Sommaire\n\n<!-- toc -->\n\n<!-- pagebreak -->\n\n## Introduction\n\ntexte\n\n<!-- pagebreak -->\n\n## Conclusion\n' });
+    const pdf = await turbopdf.create({ markdown: '# Sommaire\n\n<!-- toc -->\n\n<!-- pagebreak -->\n\n## Introduction\n\ntexte\n\n<!-- pagebreak -->\n\n## Conclusion\n' });
     const [p1] = pageTexts(pdf.toBuffer());
     expect(p1).toMatch(/Introduction\s*2/);
     expect(p1).toMatch(/Conclusion\s*3/);
@@ -93,7 +93,7 @@ describe('bookmarks and table of contents', () => {
   });
 
   it('components: <TableOfContents>, <PageNumber target>, <Link>', async () => {
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       h(Document, { title: 'Guide' },
         h(Page, null,
           h(TableOfContents, { levels: 1 }),
@@ -117,7 +117,7 @@ describe('bookmarks and table of contents', () => {
 
 describe('SVG, WebP, GIF', () => {
   it('inline <svg> is drawn as vectors, keeping viewBox', async () => {
-    const pdf = await papier.create(`<div>${SVG}</div>`);
+    const pdf = await turbopdf.create(`<div>${SVG}</div>`);
     expect(pdf.warnings).toEqual([]);
     expect(pdfHas(pdf.toBuffer(), '/Subtype/Image')).toBe(false);
     near(pixelAt(pdf.toBuffer(), 60, 40), [0x25, 0x63, 0xeb]); // 120 × 40 px from the 10 mm margin
@@ -129,7 +129,7 @@ describe('SVG, WebP, GIF', () => {
     writeFileSync(join(dir, 'logo.svg'), SVG);
     writeFileSync(join(dir, 'photo.webp'), Buffer.from(WEBP_1X1, 'base64'));
     const svgUrl = `data:image/svg+xml;utf8,${encodeURIComponent(SVG)}`;
-    const pdf = await papier.create({
+    const pdf = await turbopdf.create({
       html: `<img src="logo.svg"><img src="photo.webp" width="30" height="30"><img src="data:image/gif;base64,${GIF_1X1}" width="30"><img src="${svgUrl}" width="60">`,
       baseDir: dir,
     });
@@ -138,7 +138,7 @@ describe('SVG, WebP, GIF', () => {
   });
 
   it('<Image> accepts SVG bytes', async () => {
-    const pdf = await papier.create(h(Image, { src: Buffer.from(SVG), style: { width: 90 } }));
+    const pdf = await turbopdf.create(h(Image, { src: Buffer.from(SVG), style: { width: 90 } }));
     expect(pdf.warnings).toEqual([]);
   });
 });
@@ -157,7 +157,7 @@ describe('flex containers', () => {
     // a flex item keeps its box styles
     const badge = await toTree({ html: '<style>.b{position:absolute;top:4px;background:#b45309;padding:4px}</style><div style="display:flex"><span class="b">NEUF</span></div>' });
     expect(badge.children[0]!.children[0]).toMatchObject({ children: [{ type: 'text', style: { position: 'absolute', backgroundColor: '#b45309', padding: 3 } }] });
-    const [text] = pageTexts((await papier.create('<div style="display:flex;justify-content:space-between"><span>Gauche</span><span>Droite</span></div>')).toBuffer());
+    const [text] = pageTexts((await turbopdf.create('<div style="display:flex;justify-content:space-between"><span>Gauche</span><span>Droite</span></div>')).toBuffer());
     expect(text).toMatch(/Gauche\s+Droite/);
   });
 });
@@ -169,7 +169,7 @@ describe('position: absolute and watermark', () => {
       <div style="position:absolute;top:0;right:0;width:80px;height:30px;background:#dc2626;color:#fff">PAYÉ</div>
       <p>Ligne suivante</p>
     </div>`;
-    const pdf = await papier.create(html);
+    const pdf = await turbopdf.create(html);
     near(pixelAt(pdf.toBuffer(), 540, 35), [0xdc, 0x26, 0x26]); // top-right corner of the page body
     const tree = await toTree({ html });
     const [box] = tree.children[0]!.children;
@@ -177,9 +177,9 @@ describe('position: absolute and watermark', () => {
   });
 
   it('watermark is stamped on every page', async () => {
-    const pdf = await papier.create({ html: '<p>un</p><p style="break-before:page">deux</p>', watermark: 'BROUILLON' });
+    const pdf = await turbopdf.create({ html: '<p>un</p><p style="break-before:page">deux</p>', watermark: 'BROUILLON' });
     for (const t of pageTexts(pdf.toBuffer())) expect(t).toContain('BROUILLON');
-    await expect(papier.create({ html: 'x', watermark: '  ' })).rejects.toMatchObject({ code: 'invalid_source' });
+    await expect(turbopdf.create({ html: 'x', watermark: '  ' })).rejects.toMatchObject({ code: 'invalid_source' });
   });
 
   it('<Page watermark> with settings', async () => {
@@ -190,7 +190,7 @@ describe('position: absolute and watermark', () => {
 
 describe('@font-face with local files', () => {
   it('is loaded from baseDir', async () => {
-    const pdf = await papier.create({
+    const pdf = await turbopdf.create({
       html: `<style>@font-face { font-family: "Icons"; src: url(fixtures/codicon.ttf) format("truetype"); } p { font-family: Icons; font-size: 30px }</style><p>${FONT_GLYPH}</p>`,
       baseDir: TEST_DIR,
     });
@@ -204,13 +204,13 @@ describe('@font-face with local files', () => {
     mkdirSync(join(dir, 'fonts'));
     copyFileSync(FONT_PATH, join(dir, 'fonts', 'icons.ttf'));
     writeFileSync(join(dir, 'css', 'style.css'), '@font-face { font-family: Icons; src: url("../fonts/icons.ttf"); font-weight: 400 } p { font-family: Icons }');
-    const pdf = await papier.create({ html: `<link rel="stylesheet" href="css/style.css"><p>${FONT_GLYPH}</p>`, baseDir: dir });
+    const pdf = await turbopdf.create({ html: `<link rel="stylesheet" href="css/style.css"><p>${FONT_GLYPH}</p>`, baseDir: dir });
     expect(pdfHas(pdf.toBuffer(), 'codicon')).toBe(true);
     expect(pdf.warnings).toEqual([]);
   });
 
   it('web fonts and WOFF2 give a font_failed warning that says what to do', async () => {
-    const pdf = await papier.create(
+    const pdf = await turbopdf.create(
       '<style>@font-face{font-family:A;src:url(https://fonts.example/a.woff2) format("woff2")} @font-face{font-family:B;src:url(b.woff2) format("woff2")}</style><p>x</p>',
     );
     expect(pdf.warnings.map((w) => [w.type, w.url])).toEqual([
@@ -243,7 +243,7 @@ describe('QR codes', () => {
   });
 
   it('renders with no warning in the PDF, the PNG and the HTML preview', async () => {
-    const pdf = await papier.create(`<p>Scannez :</p><img src="qr:${url}" alt="Payer" width="100">`);
+    const pdf = await turbopdf.create(`<p>Scannez :</p><img src="qr:${url}" alt="Payer" width="100">`);
     expect(pdf.warnings).toEqual([]);
     expect((await pdf.toPng({ scale: 1 })).length).toBe(1);
     const { style, pages } = await pdf.preview();
@@ -252,6 +252,6 @@ describe('QR codes', () => {
   });
 
   it('an empty QR code is a clear error', async () => {
-    await expect(papier.create('<img src="qr:">')).rejects.toMatchObject({ code: 'invalid_tree' });
+    await expect(turbopdf.create('<img src="qr:">')).rejects.toMatchObject({ code: 'invalid_tree' });
   });
 });

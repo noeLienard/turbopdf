@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import papier from '../src/index';
+import turbopdf from '../src/index';
 import { toTree } from '../src/rust/engine';
 import { pageTexts, pdfHas } from './helpers';
 
@@ -64,7 +64,7 @@ describe('markdown → document tree', () => {
 
 describe('markdown → PDF', () => {
   it('renders a clean report on two pages split at the page break', async () => {
-    const pdf = await papier.create({ markdown: REPORT });
+    const pdf = await turbopdf.create({ markdown: REPORT });
     const [p1, p2] = pageTexts(pdf.toBuffer());
     expect(pdf.pages).toBe(2);
     expect(p1).toContain('Rapport mensuel');
@@ -77,17 +77,17 @@ describe('markdown → PDF', () => {
   });
 
   it('a plain string is still HTML, never Markdown', async () => {
-    const pdf = await papier.create('# not a heading');
+    const pdf = await turbopdf.create('# not a heading');
     expect(pageTexts(pdf.toBuffer())[0]).toContain('# not a heading');
   });
 
   it('`css` is for html / react sources', async () => {
-    await expect(papier.create({ markdown: '# Title', css: 'h1{display:none}' })).rejects.toThrow(/`css` applies to `html` and `react`/);
+    await expect(turbopdf.create({ markdown: '# Title', css: 'h1{display:none}' })).rejects.toThrow(/`css` applies to `html` and `react`/);
   });
 
   it('repeats table headers across pages', async () => {
     const rows = Array.from({ length: 120 }, (_, i) => `| Row ${i + 1} | ${i} |`).join('\n');
-    const pdf = await papier.create({ markdown: `| NAMECOL | n |\n|---|---|\n${rows}` });
+    const pdf = await turbopdf.create({ markdown: `| NAMECOL | n |\n|---|---|\n${rows}` });
     expect(pdf.pages).toBeGreaterThan(1);
     for (const t of pageTexts(pdf.toBuffer())) expect(t).toContain('NAMECOL');
     expect(pdfHas(pdf.toBuffer(), '%PDF-')).toBe(true);

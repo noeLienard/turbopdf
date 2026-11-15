@@ -2,7 +2,7 @@
 import type { HtmlFromEngine } from '../preview';
 import { readFile, realpath } from 'node:fs/promises';
 import { extname, isAbsolute, posix, relative, resolve } from 'node:path';
-import { PapierError } from '../errors';
+import { TurboPdfError } from '../errors';
 import { FORMATS, normalizeMargin, toPx } from '../formats';
 import { holdSlotUntil } from '../queue';
 import type { Document, Edges, FontFace, FontStyle, Node, Page, PageSize, Warning as TreeWarning, Watermark } from '../tree';
@@ -13,7 +13,7 @@ import { markdownToNodes } from './markdown';
 import { blocks, pagesOf, parseMarkup, type Child, type El, type PageParts } from './markup';
 import { loadNative, nativeError } from './native';
 
-const invalid = (message: string) => new PapierError('invalid_source', message);
+const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
 /** True for objects that look like a React element. */
 export function isReactElement(value: unknown): value is ReactElementLike {
@@ -22,9 +22,9 @@ export function isReactElement(value: unknown): value is ReactElementLike {
 
 /** Built-in rules: the page-break utility classes. */
 const UA_CSS = `
-.papier-break-before { break-before: page }
-.papier-break-after { break-after: page }
-.papier-keep-together { break-inside: avoid }
+.turbopdf-break-before { break-before: page }
+.turbopdf-break-after { break-after: page }
+.turbopdf-keep-together { break-inside: avoid }
 `;
 
 const pt = (v: string | number) => toPx(v) * 0.75;
@@ -106,12 +106,12 @@ async function reactMarkup(element: unknown): Promise<string> {
   try {
     server = (await import('react-dom/server')) as unknown as typeof server;
   } catch (cause) {
-    throw new PapierError('react_not_installed', 'A React element was passed but "react" and "react-dom" are not installed. Run: npm install react react-dom', { cause });
+    throw new TurboPdfError('react_not_installed', 'A React element was passed but "react" and "react-dom" are not installed. Run: npm install react react-dom', { cause });
   }
   try {
     return server.renderToStaticMarkup(element);
   } catch (cause) {
-    throw new PapierError('render_failed', `Your React component threw while rendering: ${(cause as Error).message}`, { cause });
+    throw new TurboPdfError('render_failed', `Your React component threw while rendering: ${(cause as Error).message}`, { cause });
   }
 }
 
@@ -240,7 +240,7 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = []): Promis
   let parts: Parts;
   if (o.markdown !== undefined) {
     if (typeof o.markdown !== 'string' || !o.markdown.trim()) throw invalid('`markdown` must be a non-empty string.');
-    if (o.css !== undefined) throw invalid('`css` applies to `html` and `react` sources. Markdown is styled by Papier; use `html` for full control.');
+    if (o.css !== undefined) throw invalid('`css` applies to `html` and `react` sources. Markdown is styled by TurboPDF; use `html` for full control.');
     parts = { pages: [{ props: {}, children: markdownToNodes(o.markdown) }], sheet: parseStylesheets([]) };
   } else if (o.html !== undefined) {
     if (typeof o.html !== 'string' || !o.html.trim()) throw invalid('`html` must be a non-empty string.');
@@ -346,8 +346,8 @@ function withDeadline<T>(work: Promise<T>, o: CreateOptions): Promise<T> {
   const timeout = o.timeout ?? 30_000;
   if (!(timeout > 0)) throw invalid('`timeout` must be a positive number of milliseconds.');
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new PapierError('render_timeout', `Rendering took longer than ${timeout} ms. Raise \`timeout\` or simplify the document.`)), timeout);
-    const onAbort = () => reject(new PapierError('aborted', 'Rendering was aborted.'));
+    const timer = setTimeout(() => reject(new TurboPdfError('render_timeout', `Rendering took longer than ${timeout} ms. Raise \`timeout\` or simplify the document.`)), timeout);
+    const onAbort = () => reject(new TurboPdfError('aborted', 'Rendering was aborted.'));
     o.signal?.addEventListener('abort', onAbort, { once: true });
     work.then(resolve, reject).finally(() => {
       clearTimeout(timer);
@@ -376,7 +376,7 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
     try {
       out = await native.render(tree, { baseDir });
     } catch (e) {
-      throw e instanceof PapierError ? e : nativeError(e);
+      throw e instanceof TurboPdfError ? e : nativeError(e);
     }
     return {
       pdf: out.pdf,
@@ -387,7 +387,7 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
         typeof native.previewHtml === 'function'
           ? native.previewHtml(tree, { baseDir }).catch((e: unknown) => Promise.reject(nativeError(e)))
           : Promise.reject(
-              new PapierError(
+              new TurboPdfError(
                 'engine_unavailable',
                 'The loaded Rust engine is older than this SDK (no HTML preview). Restart the process: a native module is never reloaded while Node runs (e.g. stop and rerun `next dev`).',
               ),
