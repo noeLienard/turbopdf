@@ -304,11 +304,8 @@ impl LengthParser<'_> {
             "rem" => n * ROOT_FONT_SIZE,
             "vw" => n * A4.0 / 100.0,
             "vh" => n * A4.1 / 100.0,
-            u => match unit(u) {
-                Some(k) => n * k,
-                // `2fr`, `10deg`…: not a length, and the letters are not consumed
-                None => return None,
-            },
+            // `2fr`, `10deg`…: not a length, and the letters are not consumed
+            u => n * unit(u)?,
         };
         self.at = j;
         Some(v)
