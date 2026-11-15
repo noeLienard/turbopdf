@@ -119,8 +119,16 @@ pub struct FontFace {
 #[serde(untagged)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "tree.ts"))]
 pub enum BinarySource {
-    Data { data: String },
-    File { file: String },
+    Data {
+        data: String,
+    },
+    File {
+        file: String,
+    },
+    /// Index of a buffer handed to the engine next to the tree (Node binding): raw bytes, no base64.
+    Buffer {
+        buffer: u32,
+    },
 }
 
 /// Where an image comes from: bytes (base64 or file), or a QR code drawn by the engine (vector).
@@ -128,8 +136,16 @@ pub enum BinarySource {
 #[serde(untagged)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "tree.ts"))]
 pub enum ImageSource {
-    Data { data: String },
-    File { file: String },
+    Data {
+        data: String,
+    },
+    File {
+        file: String,
+    },
+    /// Index of a buffer handed to the engine next to the tree (Node binding): raw bytes, no base64.
+    Buffer {
+        buffer: u32,
+    },
     Qr(QrCode),
 }
 

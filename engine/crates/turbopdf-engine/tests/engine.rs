@@ -1279,3 +1279,62 @@ impl ttf_parser::OutlineBuilder for NoOutline {
     fn curve_to(&mut self, _: f32, _: f32, _: f32, _: f32, _: f32, _: f32) {}
     fn close(&mut self) {}
 }
+
+// ------------------------------------------------------------------ buffers and prepared documents
+
+struct BufferLoader(Vec<Vec<u8>>);
+impl ResourceLoader for BufferLoader {
+    fn load(&self, path: &str) -> Result<Vec<u8>, String> {
+        Err(format!("no files: {path}"))
+    }
+    fn buffer(&self, index: u32) -> Result<Vec<u8>, String> {
+        self.0
+            .get(index as usize)
+            .cloned()
+            .ok_or_else(|| format!("no buffer {index}"))
+    }
+}
+
+#[test]
+fn fonts_and_images_can_come_from_buffers_passed_next_to_the_tree() {
+    let png = base64::engine::general_purpose::STANDARD
+        .decode(PNG_1X1)
+        .unwrap();
+    let engine = Engine::with_loader(Arc::new(BufferLoader(vec![inter("Inter-Bold.ttf"), png])));
+    let d = doc(json!({
+        "type": "document", "version": 1,
+        "fonts": [{ "family": "Brand", "weight": 400, "source": { "buffer": 0 } }],
+        "children": [{ "type": "page", "children": [
+            { "type": "text", "style": { "fontFamily": "Brand" }, "content": "Hello" },
+            { "type": "image", "src": { "buffer": 1 }, "style": { "width": 10, "height": 10 } },
+            { "type": "image", "src": { "buffer": 7 }, "style": { "width": 10, "height": 10 } }
+        ]}]
+    }));
+    let out = engine.render(&d).expect("render");
+    let failed: Vec<_> = out
+        .warnings
+        .iter()
+        .filter(|w| matches!(w, Warning::ImageFailed { .. }))
+        .collect();
+    assert_eq!(failed.len(), 1, "only the missing buffer fails: {failed:?}");
+
+    let missing = doc(json!({
+        "type": "document", "version": 1,
+        "fonts": [{ "family": "Brand", "weight": 400, "source": { "buffer": 9 } }],
+        "children": [{ "type": "page", "children": [] }]
+    }));
+    assert!(matches!(
+        engine.render(&missing),
+        Err(EngineError::Font { .. })
+    ));
+}
+
+#[test]
+fn a_prepared_document_draws_the_same_outputs_as_separate_calls() {
+    let d = body(json!([table(60, json!({}))]));
+    let engine = Engine::new();
+    let prepared = engine.prepare(&d).expect("prepare");
+    assert_eq!(prepared.pdf().unwrap(), engine.render(&d).unwrap().pdf);
+    assert_eq!(prepared.png(1.0).unwrap(), engine.preview(&d, 1.0).unwrap());
+    assert_eq!(prepared.html().pages.len(), prepared.pages() as usize);
+}

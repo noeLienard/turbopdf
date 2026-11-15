@@ -94,6 +94,14 @@ impl Engine {
                         family: f.family.clone(),
                         reason: format!("invalid base64: {e}"),
                     })?,
+                BinarySource::Buffer { buffer } => {
+                    self.loader
+                        .buffer(*buffer)
+                        .map_err(|reason| EngineError::Font {
+                            family: f.family.clone(),
+                            reason,
+                        })?
+                }
                 BinarySource::File { file } => {
                     self.loader.load(file).map_err(|reason| EngineError::Font {
                         family: f.family.clone(),
@@ -127,45 +135,96 @@ impl Engine {
         Ok((layout, db))
     }
 
+    /// Lay the document out once. The result writes the PDF, the PNGs and the HTML preview without
+    /// laying it out again.
+    pub fn prepare(&self, doc: &Document) -> Result<Prepared, EngineError> {
+        let (layout, fonts) = self.layout(doc)?;
+        Ok(Prepared {
+            layout,
+            fonts,
+            meta: doc.meta.clone(),
+            options: pdf_options(doc),
+        })
+    }
+
     /// Tree → PDF bytes (+ page count + warnings).
     pub fn render(&self, doc: &Document) -> Result<RenderOutput, EngineError> {
-        let (layout, db) = self.layout(doc)?;
-        let pdf = turbopdf_pdf::write(&layout, &db, doc.meta.as_ref(), pdf_options(doc))?;
+        let prepared = self.prepare(doc)?;
         Ok(RenderOutput {
-            pdf,
-            pages: layout.pages.len() as u32,
-            warnings: layout.warnings,
+            pdf: prepared.pdf()?,
+            pages: prepared.pages(),
+            warnings: prepared.layout.warnings,
         })
     }
 
     /// Tree → one PNG per page.
     pub fn preview(&self, doc: &Document, scale: f32) -> Result<Vec<Vec<u8>>, EngineError> {
-        let (layout, db) = self.layout(doc)?;
-        Ok(turbopdf_raster::render(&layout, &db, scale)?)
+        self.prepare(doc)?.png(scale)
     }
 
     /// Tree → HTML/CSS preview: real text and fonts, working links, same layout as the PDF.
     pub fn preview_html(&self, doc: &Document) -> Result<turbopdf_html::HtmlPreview, EngineError> {
-        let (layout, db) = self.layout(doc)?;
-        Ok(turbopdf_html::render(&layout, &db))
+        Ok(self.prepare(doc)?.html())
     }
 
-    /// PDF and previews from a single layout pass.
+    /// PDF and PNG previews from a single layout pass.
     pub fn render_with_previews(
         &self,
         doc: &Document,
         scale: f32,
     ) -> Result<(RenderOutput, Vec<Vec<u8>>), EngineError> {
-        let (layout, db) = self.layout(doc)?;
-        let pdf = turbopdf_pdf::write(&layout, &db, doc.meta.as_ref(), pdf_options(doc))?;
-        let previews = turbopdf_raster::render(&layout, &db, scale)?;
+        let prepared = self.prepare(doc)?;
+        let previews = prepared.png(scale)?;
+        let pdf = prepared.pdf()?;
+        let pages = prepared.pages();
         Ok((
             RenderOutput {
                 pdf,
-                pages: layout.pages.len() as u32,
-                warnings: layout.warnings,
+                pages,
+                warnings: prepared.layout.warnings,
             },
             previews,
         ))
+    }
+}
+
+/// A laid-out document: every output is drawn from the same layout, computed once.
+pub struct Prepared {
+    layout: Layout,
+    fonts: FontDb,
+    meta: Option<turbopdf_tree::Meta>,
+    options: turbopdf_pdf::PdfOptions,
+}
+
+impl Prepared {
+    pub fn pages(&self) -> u32 {
+        self.layout.pages.len() as u32
+    }
+
+    pub fn warnings(&self) -> &[Warning] {
+        &self.layout.warnings
+    }
+
+    pub fn layout(&self) -> &Layout {
+        &self.layout
+    }
+
+    pub fn pdf(&self) -> Result<Vec<u8>, EngineError> {
+        Ok(turbopdf_pdf::write(
+            &self.layout,
+            &self.fonts,
+            self.meta.as_ref(),
+            self.options,
+        )?)
+    }
+
+    /// One PNG per page. `scale` is pixels per point (1 = 72 dpi).
+    pub fn png(&self, scale: f32) -> Result<Vec<Vec<u8>>, EngineError> {
+        Ok(turbopdf_raster::render(&self.layout, &self.fonts, scale)?)
+    }
+
+    /// HTML/CSS preview: real text and fonts, working links, same layout as the PDF.
+    pub fn html(&self) -> turbopdf_html::HtmlPreview {
+        turbopdf_html::render(&self.layout, &self.fonts)
     }
 }

@@ -7,7 +7,7 @@ export type AlignItems = "flex-start" | "flex-end" | "center" | "stretch" | "bas
  * `file` is resolved by the host (Node binding) through a resource loader; in WebAssembly
  * without a loader it yields a warning (`image_failed`) or an error (fonts).
  */
-export type BinarySource = { data: string, } | { file: string, };
+export type BinarySource = { data: string, } | { file: string, } | { buffer: number, };
 
 export type Border = { 
 /**
@@ -127,7 +127,7 @@ export type ImageFormat = "png" | "jpeg" | "webp" | "gif" | "svg";
 /**
  * Where an image comes from: bytes (base64 or file), or a QR code drawn by the engine (vector).
  */
-export type ImageSource = { data: string, } | { file: string, } | QrCode;
+export type ImageSource = { data: string, } | { file: string, } | { buffer: number, } | QrCode;
 
 export type JustifyContent = "flex-start" | "flex-end" | "center" | "space-between" | "space-around" | "space-evenly";
 

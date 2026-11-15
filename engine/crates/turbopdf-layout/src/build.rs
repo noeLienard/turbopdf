@@ -426,6 +426,7 @@ fn load_image(cx: &mut Cx, src: &t::ImageSource, path: &str) -> Option<usize> {
             .decode(data.trim())
             .map_err(|e| format!("invalid base64: {e}")),
         t::ImageSource::File { file } => cx.loader.load(file),
+        t::ImageSource::Buffer { buffer } => cx.loader.buffer(*buffer),
         t::ImageSource::Qr(q) => qr_svg(q).map(String::into_bytes),
     };
     let result = bytes.and_then(|b| {

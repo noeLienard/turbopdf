@@ -164,16 +164,16 @@ is extra.</sub>
 
 ## How it compares
 
-| | **TurboPDF** | Puppeteer / Playwright | React-pdf | PDFKit |
+| | **TurboPDF** | Puppeteer / Playwright | React-pdf | wkhtmltopdf |
 |---|---|---|---|---|
-| HTML & CSS input | ✅ **native engine** | ✅ through Chromium | ❌ | ❌ |
-| React input | ✅ **your own components** | ✅ through SSR | ✅ its own primitives | ❌ |
+| HTML & CSS input | ✅ **native engine** | ✅ through Chromium | ❌ | ⚠️ old QtWebKit, no Flexbox/Grid |
+| React input | ✅ **your own components** | ✅ through SSR | ✅ its own primitives | ⚠️ through SSR |
 | Markdown input | ✅ | ❌ | ❌ | ❌ |
-| Runs without a browser | ✅ | ❌ | ✅ | ✅ |
-| Safe with untrusted input | ✅ **no scripts, no network** | ⚠️ needs hardening | – | – |
-| Byte-identical output | ✅ | ❌ | ❌ | ⚠️ manual |
-| Rows never split, headers repeat | ✅ **built in** | ⚠️ print CSS | ⚠️ manual | ⚠️ manual |
-| Tagged PDF / PDF/UA | ✅ **default / one flag** | ⚠️ experimental | ❌ | ⚠️ manual |
+| Runs without a browser | ✅ | ❌ | ✅ | ❌ embedded WebKit |
+| Safe with untrusted input | ✅ **no scripts, no network** | ⚠️ needs hardening | – | ❌ archived, unpatched |
+| Byte-identical output | ✅ | ❌ | ❌ | ❌ |
+| Rows never split, headers repeat | ✅ **built in** | ⚠️ print CSS | ⚠️ manual | ⚠️ print CSS |
+| Tagged PDF / PDF/UA | ✅ **default / one flag** | ⚠️ experimental | ❌ | ❌ |
 | HTML preview of the PDF | ✅ | ❌ | ❌ | ❌ |
 
 ## Everything included

@@ -11,7 +11,7 @@ import { applyStylesheet, parseStylesheets, styleElements, stylesheetLinks, type
 import { parseCss } from './css';
 import { markdownToNodes } from './markdown';
 import { blocks, pagesOf, parseMarkup, type Child, type El, type PageParts } from './markup';
-import { loadNative, nativeError } from './native';
+import { loadNative, nativeError, type NativeDocument } from './native';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
@@ -79,23 +79,22 @@ function geometry(o: CreateOptions, page: PageRule): Geometry {
   return { size, ...(orientation ? { orientation } : {}), margin };
 }
 
-async function fontsOf(o: CreateOptions): Promise<FontFace[] | undefined> {
+async function fontsOf(o: CreateOptions, buffers?: Buffer[]): Promise<FontFace[] | undefined> {
   if (!o.fonts?.length) return undefined;
   const out: FontFace[] = [];
   for (const f of o.fonts) {
     if (!f.family || (f.path === undefined) === (f.data === undefined)) throw invalid('Each font needs a `family` and exactly one of `path` or `data`.');
-    let bytes: Uint8Array;
-    if (f.path !== undefined) {
-      if (!['.ttf', '.otf'].includes(extname(f.path).toLowerCase())) throw invalid(`Unsupported font file "${f.path}". Use .ttf or .otf (WOFF / WOFF2 are not supported).`);
-      const loaded = await readInside(f.path, o.baseDir ?? process.cwd());
-      if ('reason' in loaded) throw invalid(`Font file "${f.path}" was not loaded: ${loaded.reason}`);
-      bytes = loaded.bytes;
-    } else {
-      bytes = f.data!;
+    if (f.path !== undefined && !['.ttf', '.otf'].includes(extname(f.path).toLowerCase())) {
+      throw invalid(`Unsupported font file "${f.path}". Use .ttf or .otf (WOFF / WOFF2 are not supported).`);
     }
+    // a path is read by the engine, inside baseDir; bytes go next to the tree, without base64
+    let source: FontFace['source'];
+    if (f.path !== undefined) source = { file: f.path };
+    else if (buffers) source = { buffer: buffers.push(Buffer.from(f.data!.buffer, f.data!.byteOffset, f.data!.byteLength)) - 1 };
+    else source = { data: Buffer.from(f.data!).toString('base64') };
     const weight = f.weight === undefined ? 400 : f.weight === 'bold' ? 700 : f.weight === 'normal' ? 400 : Number(f.weight);
     if (!(weight >= 100 && weight <= 900)) throw invalid(`Invalid font weight "${String(f.weight)}" for "${f.family}". Use 100–900.`);
-    out.push({ family: f.family, weight, style: f.style ?? 'normal', source: { data: Buffer.from(bytes).toString('base64') } });
+    out.push({ family: f.family, weight, style: f.style ?? 'normal', source });
   }
   return out;
 }
@@ -233,8 +232,11 @@ function band(html: string | undefined, sheet: Stylesheet): Node[] | undefined {
   return nodes.length ? nodes : undefined;
 }
 
-/** Build the document tree for any source. Exported for tests and debugging. */
-export async function toTree(o: CreateOptions, warnings: Warning[] = []): Promise<Document> {
+/**
+ * Build the document tree for any source. Exported for tests and debugging. With `buffers`, bytes given in
+ * the options are appended to it and referenced as `{ buffer: n }` instead of being base64-encoded.
+ */
+export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers?: Buffer[]): Promise<Document> {
   if (o.tree !== undefined) return o.tree;
   const baseDir = o.baseDir ?? process.cwd();
   let parts: Parts;
@@ -295,7 +297,7 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = []): Promis
     ),
   };
   // fonts given with the option come last: they win over @font-face rules of the same family and weight
-  const fonts = [...(await fontFaces(parts.sheet.fontFaces, baseDir, warnings)), ...((await fontsOf(o)) ?? [])];
+  const fonts = [...(await fontFaces(parts.sheet.fontFaces, baseDir, warnings)), ...((await fontsOf(o, buffers)) ?? [])];
   if (fonts.length) doc.fonts = fonts;
   return doc;
 }
@@ -369,27 +371,28 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
   const completion = (async (): Promise<RenderResult> => {
     const native = loadNative();
     const sdkWarnings: Warning[] = [];
-    const doc = await toTree(o, sdkWarnings);
-    const tree = JSON.stringify(doc);
-    const baseDir = o.baseDir ?? process.cwd();
-    let out: Awaited<ReturnType<typeof native.render>>;
+    const buffers: Buffer[] = [];
+    const doc = await toTree(o, sdkWarnings, buffers);
+    let rendered: NativeDocument;
     try {
-      out = await native.render(tree, { baseDir });
+      rendered = await native.render(JSON.stringify(doc), { baseDir: o.baseDir ?? process.cwd(), buffers });
     } catch (e) {
       throw e instanceof TurboPdfError ? e : nativeError(e);
     }
+    const fail = (e: unknown) => Promise.reject(nativeError(e));
     return {
-      pdf: out.pdf,
-      pages: out.pages,
-      warnings: [...sdkWarnings, ...(JSON.parse(out.warnings) as TreeWarning[]).map(toWarning)],
-      png: (scale) => native.preview(tree, { baseDir, scale }).catch((e: unknown) => Promise.reject(nativeError(e))),
+      pdf: rendered.takePdf(),
+      pages: rendered.pages,
+      warnings: [...sdkWarnings, ...(JSON.parse(rendered.warnings) as TreeWarning[]).map(toWarning)],
+      // drawn from the layout above: the document is not parsed or laid out again
+      png: (scale) => rendered.png(scale).catch(fail),
       html: () =>
-        typeof native.previewHtml === 'function'
-          ? native.previewHtml(tree, { baseDir }).catch((e: unknown) => Promise.reject(nativeError(e)))
+        typeof rendered.html === 'function'
+          ? rendered.html().catch(fail)
           : Promise.reject(
               new TurboPdfError(
                 'engine_unavailable',
-                'The loaded Rust engine is older than this SDK (no HTML preview). Restart the process: a native module is never reloaded while Node runs (e.g. stop and rerun `next dev`).',
+                'The loaded Rust engine is older than this SDK. Restart the process: a native module is never reloaded while Node runs (e.g. stop and rerun `next dev`).',
               ),
             ),
       meta: { title: doc.meta?.title, lang: doc.meta?.lang },

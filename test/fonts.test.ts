@@ -34,15 +34,15 @@ describe('fonts', () => {
     expect(pdfHas(pdf.toBuffer(), 'codicon')).toBe(true);
   });
 
-  it('rejects a missing file or an invalid declaration', async () => {
+  it('rejects a missing file, a file outside baseDir or an invalid declaration', async () => {
     const code = async (p: Promise<unknown>) => ((await p.then(() => null, (e: unknown) => e)) as TurboPdfError).code;
-    expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: '/nope/missing.ttf' }] }))).toBe('invalid_source');
+    expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: '/nope/missing.ttf' }] }))).toBe('font_failed');
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: 'font.exe' }] }))).toBe('invalid_source');
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A' }] }))).toBe('invalid_source');
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: 'brand.woff2' }] }))).toBe('invalid_source');
     const baseDir = mkdtempSync(join(tmpdir(), 'turbopdf-font-base-'));
     const linked = join(baseDir, 'linked.ttf');
     symlinkSync(FONT_PATH, linked);
-    expect(await code(turbopdf.create({ html: 'x', baseDir, fonts: [{ family: 'A', path: linked }] }))).toBe('invalid_source');
+    expect(await code(turbopdf.create({ html: 'x', baseDir, fonts: [{ family: 'A', path: linked }] }))).toBe('font_failed');
   });
 });

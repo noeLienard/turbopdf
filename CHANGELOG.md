@@ -48,6 +48,12 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
   that can match it. A 9,000-rule stylesheet over 4,000 elements: 9.8 s → 0.12 s.
 - `tsx` is no longer installed with turbopdf (it pulled esbuild, ~10 MB). It is an optional peer dependency, only
   needed by `turbopdf dev` for `.tsx` / `.jsx` files.
+- `pdf.preview()` and `pdf.toPng()` reuse the layout computed by `create()`: the engine keeps the laid-out
+  document (`Engine::prepare` in Rust, a `NativeDocument` in the Node binding) instead of parsing and laying
+  the tree out again for every output.
+- `fonts: [{ data }]` bytes go to the engine next to the tree (`{ "buffer": n }` sources), without base64.
+- `fonts: [{ path }]` is read by the engine, inside `baseDir`, like images: a missing file, or one outside
+  `baseDir`, now throws `font_failed` (was `invalid_source`).
 - `pdfua: true`: PDF/UA-1 conformance (validated while writing). Error code `not_accessible`, warning
   `missing_alt`. `title` and `lang` options; Markdown takes its title from the first `# heading`.
 - Warnings `moved_to_next_page`, `missing_glyph`, `stylesheet_failed`, `font_failed`, `broken_link`; warnings
