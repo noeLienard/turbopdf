@@ -4,13 +4,14 @@
 
 **HTML, React or Markdown → PDF in milliseconds. No browser. No network. Same bytes every time.**
 
-A native Rust layout engine behind a tiny TypeScript API. Drop Puppeteer and keep your templates.
+A native Rust layout engine behind a tiny TypeScript API, **built to be written by AI**. Drop Puppeteer and keep your templates.
 
 [![CI](https://github.com/noeLienard/turbopdf/actions/workflows/ci.yml/badge.svg)](https://github.com/noeLienard/turbopdf/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/turbopdf?color=cb3837)](https://www.npmjs.com/package/turbopdf)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Rust engine](https://img.shields.io/badge/engine-Rust-dea584?logo=rust)
 ![PDF/UA-1](https://img.shields.io/badge/PDF%2FUA--1-ready-2ea44f)
+[![AI-native: llms.txt](https://img.shields.io/badge/AI--native-llms.txt-8a2be2)](llms.txt)
 
 <img src=".github/assets/facture.png" width="40%" alt="An invoice written in React and CSS, rendered by TurboPDF" />
 <img src=".github/assets/devis.png" width="40%" alt="A quote written with TurboPDF components, with a diagonal watermark" />
@@ -53,7 +54,41 @@ purpose-built document engine written in Rust. It does Flexbox, Grid, text shapi
   `see page 4` references, a table of contents, bookmarks and watermarks are built in.
 - ♿ **Accessible by default.** Every PDF is tagged for screen readers. One flag gives you **PDF/UA-1**, the standard
   behind the European Accessibility Act.
+- 🤖 **AI-native.** Models already write HTML, Markdown and React well, and TurboPDF takes all three. Your assistant writes
+  PDFs without learning anything new. [See below](#-ai-native).
 - 🧩 **One API, four sources**: HTML/CSS, React, Markdown, or a typed document tree.
+
+## 🤖 AI-native
+
+TurboPDF is designed so an AI assistant (Claude, Cursor, Copilot…) can add PDF generation to your app in one prompt,
+and so an AI agent can produce documents on its own.
+
+- **One function, no setup.** `create(source)` → `save()` / `toResponse()`. There is no browser to install or
+  configure, so the assistant has nothing to get wrong.
+- **`llms.txt` is included.** The whole API, the CSS that works and the common pitfalls fit on one page, in
+  [`llms.txt`](llms.txt) (also shipped in the npm package). Point your assistant at it:
+  *"Use turbopdf, read node_modules/turbopdf/llms.txt"*.
+- **Formats models already know.** HTML/CSS, Markdown and React need no new DSL to learn. A model can also emit
+  the **JSON document tree** directly, typed in `turbopdf/tree`.
+- **Errors a model can fix by itself.** Each warning says what went wrong, where, and how to fix it. Invalid trees
+  list every problem with its JSON path. Feed them back and render again.
+- **It can see its own output.** `pdf.toPng()` gives an image of each page for multimodal models to check, and
+  `pdf.preview()` gives HTML for chat UIs.
+- **Safe for AI-generated content.** Model output is untrusted input. TurboPDF never runs scripts, never makes network
+  requests, and reads files only inside `baseDir`. A prompt-injected document has nothing to call and nowhere to send data.
+- **Fast enough for agent loops.** Each render takes milliseconds, so an agent can draft, check and fix many times
+  in a second.
+
+```ts
+// An agent's self-correcting loop
+let html = await model.write('A one-page invoice for Acme, 3 items');
+for (let i = 0; i < 3; i++) {
+  const pdf = await turbopdf.create({ html });
+  if (pdf.warnings.length === 0) return pdf;
+  const [page] = await pdf.toPng({ scale: 1 });
+  html = await model.fix(html, pdf.warnings.map((w) => w.message), page.toDataUrl());
+}
+```
 
 ## Write it your way
 

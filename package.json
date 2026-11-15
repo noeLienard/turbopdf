@@ -54,6 +54,7 @@
     "dist",
     "native",
     "README.md",
+    "llms.txt",
     "LICENSE",
     "CHANGELOG.md"
   ],
@@ -73,7 +74,10 @@
     "accessibility",
     "nextjs",
     "rust",
-    "napi"
+    "napi",
+    "ai",
+    "llm",
+    "llms-txt"
   ],
   "scripts": {
     "build": "tsup",
