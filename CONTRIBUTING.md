@@ -34,10 +34,8 @@ src/preview.ts     PNG pages from the engine
 src/components.ts  turbopdf/components (React → document tree)
 src/tree.ts        turbopdf/tree types (generated from engine/crates/turbopdf-tree)
 src/rust/engine.ts source → document tree → native render, warnings
-src/rust/markup.ts HTML / React markup → document tree
-src/rust/cascade.ts CSS selectors, specificity, @media, @page
-src/rust/css.ts    CSS declarations → tree styles
 src/rust/markdown.ts Markdown → document tree
+engine/crates/turbopdf-markup  HTML (html5ever) + CSS cascade → document tree
 src/rust/native.ts loads native/turbopdf.<platform>-<arch>.node
 src/cli/           `turbopdf dev`
 engine/            the Rust engine (see engine/README.md)

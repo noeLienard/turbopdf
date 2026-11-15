@@ -1,13 +1,31 @@
 // Markdown → document tree nodes (for the Rust engine), from markdown-it tokens.
 import MarkdownIt from 'markdown-it';
 import type { Cell, Column, Node, Row, Span, TextContent, TextStyle } from '../tree';
-import { blocks, keepSpaces, parseMarkup } from './markup';
+import { TurboPdfError } from '../errors';
+import { loadNative, nativeError } from './native';
 
 const md = new MarkdownIt({ html: true, linkify: true, breaks: false });
 // `![Billet](qr:https://…)` is a QR code: keep its text exactly as written (no percent-encoding)
 const normalizeLink = md.normalizeLink.bind(md);
 md.normalizeLink = (url) => (/^qr:/i.test(url) ? url : normalizeLink(url));
 type Token = ReturnType<typeof md.parse>[number];
+
+/** Raw HTML in Markdown → nodes, converted by the engine (HTML5 parsing, inline styles). */
+function htmlNodes(html: string): Node[] {
+  try {
+    return JSON.parse(loadNative().htmlNodes(html)) as Node[];
+  } catch (e) {
+    throw e instanceof TurboPdfError ? e : nativeError(e);
+  }
+}
+
+/**
+ * Preformatted text: the engine collapses ordinary spaces, so indentation and runs of spaces become
+ * non-breaking spaces. Single spaces between words stay normal (copy / paste and search keep working).
+ */
+export function keepSpaces(text: string): string {
+  return text.replace(/^ +/gm, (m) => '\u00a0'.repeat(m.length)).replace(/ {2,}/g, (m) => ` ${'\u00a0'.repeat(m.length - 1)}`);
+}
 
 const PAGEBREAK = /^<!--\s*pagebreak\s*-->\s*$/i;
 const TOC = /^<!--\s*toc\s*-->\s*$/i;
@@ -162,7 +180,7 @@ function walk(tokens: Token[], from: number, to: number, ids: Map<string, number
         if (only.length === 1 && only[0]!.type === 'image') {
           const src = String(only[0]!.attrGet('src') ?? '');
           const attr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-          out.push(...blocks(parseMarkup(`<img src="${attr(src)}" alt="${attr(only[0]!.content)}">`)));
+          out.push(...htmlNodes(`<img src="${attr(src)}" alt="${attr(only[0]!.content)}">`));
         } else if (!t.hidden) {
           out.push({ type: 'text', style: { margin: { bottom: 8 } }, content: inline(children) });
         } else {
@@ -221,7 +239,7 @@ function walk(tokens: Token[], from: number, to: number, ids: Map<string, number
       case 'html_block':
         if (PAGEBREAK.test(t.content.trim())) out.push({ type: 'page_break' });
         else if (TOC.test(t.content.trim())) out.push({ type: 'table_of_contents' });
-        else out.push(...blocks(parseMarkup(t.content)));
+        else out.push(...htmlNodes(t.content));
         break;
     }
   }

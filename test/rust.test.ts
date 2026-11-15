@@ -2,7 +2,6 @@ import { createElement as h } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Cell, Document, Heading, Image, Page, PageBreak, PageNumber, Row, Span, Table, Text, View } from '../src/components';
 import turbopdf, { TurboPdfError } from '../src/index';
-import { parseCss } from '../src/rust/css';
 import { toTree } from '../src/rust/engine';
 import type { Document as Tree } from '../src/tree';
 import { pageTexts } from './helpers';
@@ -85,7 +84,7 @@ describe('HTML + CSS cascade', () => {
 
   it('@page sets size and margins, explicit options win', async () => {
     const html = '<style>@page { size: A5 landscape; margin: 1cm }</style><p>x</p>';
-    expect((await toTree({ html })).children[0]).toMatchObject({ size: 'A5', orientation: 'landscape', margin: 72 / 2.54 });
+    expect((await toTree({ html })).children[0]).toMatchObject({ size: 'A5', orientation: 'landscape', margin: expect.closeTo(72 / 2.54, 4) });
     expect((await toTree({ html, format: 'A4', margin: '0' })).children[0]).toMatchObject({ size: 'A4', orientation: 'landscape', margin: { top: 0 } });
   });
 
@@ -202,31 +201,10 @@ describe('plain React (HTML + inline styles)', () => {
     expect(table).toMatchObject({ type: 'table', columns: [{ width: 'auto' }, { width: 'auto' }], header: [{ cells: [{ style: { fontWeight: 700 } }, {}] }], rows: [{ cells: [{ colSpan: 2 }] }] });
   });
 
-  it('parses inline CSS units and shorthands to points', () => {
-    expect(parseCss('padding: 8px 16px; margin-top: 1cm; border: 1px solid #ccc; width: 50%; line-height: 18px; font-size: 12px')).toEqual({
-      padding: { top: 6, right: 12, bottom: 6, left: 12 },
-      margin: { top: 72 / 2.54 },
-      border: { width: 0.75, color: '#ccc', style: 'solid' },
-      width: '50%',
-      lineHeight: 1.5,
-      fontSize: 9,
-    });
-    expect(parseCss('background: rgba(255, 0, 0, 0.5); font-weight: bold; flex: 1')).toEqual({ backgroundColor: '#ff000080', fontWeight: 700, flexGrow: 1 });
-    expect(parseCss('display:flex;align-content:space-between;align-self:center;gap:4pt 8pt;position:relative;left:2pt;aspect-ratio:16/9')).toMatchObject({
-      display: 'flex', alignContent: 'space-between', alignSelf: 'center', rowGap: 4, columnGap: 8,
-      position: 'relative', left: 2, aspectRatio: 16 / 9,
-    });
-  });
-
   it('never fetches remote images: warns instead', async () => {
     const pdf = await turbopdf.create(h('img', { src: 'https://example.com/logo.png' }));
     expect(pdf.warnings[0]).toMatchObject({ type: 'image_failed', message: expect.stringContaining('never uses the network') });
   });
-    expect(parseCss('width:calc(2in - 12pt); height:min(50vh, 300pt); padding:clamp(4pt, 1rem, 20pt)')).toMatchObject({
-      width: 132,
-      height: 300,
-      padding: 11,
-    });
 });
 
 describe('markdown', () => {

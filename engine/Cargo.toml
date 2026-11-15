@@ -8,6 +8,7 @@ members = [
   "crates/turbopdf-pdf",
   "crates/turbopdf-raster",
   "crates/turbopdf-html",
+  "crates/turbopdf-markup",
   "crates/turbopdf-engine",
   "crates/turbopdf-node",
   "crates/turbopdf-wasm",
@@ -29,6 +30,7 @@ turbopdf-layout = { path = "crates/turbopdf-layout" }
 turbopdf-pdf    = { path = "crates/turbopdf-pdf" }
 turbopdf-raster = { path = "crates/turbopdf-raster" }
 turbopdf-html = { path = "crates/turbopdf-html" }
+turbopdf-markup = { path = "crates/turbopdf-markup" }
 turbopdf-engine = { path = "crates/turbopdf-engine" }
 
 # données
@@ -44,6 +46,8 @@ hypher     = "0.1"
 krilla     = { version = "0.8", default-features = false, features = ["raster-images"] }
 tiny-skia  = "0.12"
 base64     = "0.22"
+# HTML input: the WHATWG parser of Servo
+html5ever  = "0.40"
 jpeg-decoder = { version = "0.3", default-features = false }
 # SVG: parsed once (usvg), drawn as vectors in the PDF (krilla-svg) and rasterized for previews (resvg).
 usvg       = { version = "0.47", default-features = false, features = ["text"] }

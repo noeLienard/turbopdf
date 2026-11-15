@@ -54,6 +54,13 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 - `fonts: [{ data }]` bytes go to the engine next to the tree (`{ "buffer": n }` sources), without base64.
 - `fonts: [{ path }]` is read by the engine, inside `baseDir`, like images: a missing file, or one outside
   `baseDir`, now throws `font_failed` (was `invalid_source`).
+- **HTML and CSS are handled by the Rust engine** (new crate `turbopdf-markup`), not by TypeScript: HTML5
+  parsing with html5ever (the WHATWG algorithm: unclosed `<p>` / `<li>`, tables without `<tbody>`, misnested
+  tags and every named entity behave as in a browser), the CSS cascade with a rule index and an ancestor
+  Bloom filter (18,000 rules over 4,000 elements: ~0.1 s), styles parsed once into typed values instead of
+  being written back into `style` strings. Linked stylesheets and `@font-face` files are read by the engine's
+  loader, the same `baseDir` sandbox as images and fonts. `@font-face` accepts `data:` URLs. Semicolons inside
+  `url(…)` no longer split a declaration; with two `font-size` declarations the winning one is used.
 - `pdfua: true`: PDF/UA-1 conformance (validated while writing). Error code `not_accessible`, warning
   `missing_alt`. `title` and `lang` options; Markdown takes its title from the first `# heading`.
 - Warnings `moved_to_next_page`, `missing_glyph`, `stylesheet_failed`, `font_failed`, `broken_link`; warnings
