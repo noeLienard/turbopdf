@@ -39,6 +39,19 @@ await pdf.save('hello.pdf');
 
 That's the whole setup. You don't download Chrome, build a Docker image or babysit a headless browser.
 
+## The problems it solves
+
+| You have this problem | TurboPDF |
+|---|---|
+| 👀 **The preview in your app is not the PDF people download.** Page breaks, fonts and margins move between the two. | `pdf.preview()` is HTML drawn from **the same layout as the PDF**: same lines, same page breaks, same positions. What users see is what they download. |
+| 🐘 **Chrome eats memory**, leaves zombie processes and bloats your Docker image. | No browser. One native module (~11 MB, fonts included). |
+| 🥶 **Slow cold starts and timeouts on serverless.** | Nothing to launch. Each render takes a few milliseconds. |
+| 🕳️ **User HTML can reach your network or your files** (SSRF, `file://`). | No network, no scripts. Files are read only inside `baseDir`. |
+| 🎲 **It looks different locally and in production.** | Same input, same bytes, on every machine. System fonts are never used. |
+| 🔤 **A font is replaced without warning.** | `missing_glyph` and `font_failed` warnings name the character or file and say what to do. |
+| ✂️ **Table rows cut in half, headers lost on page 2.** | Rows are never split, and table headers repeat on every page by default. |
+| 🧓 **Stuck on wkhtmltopdf** (archived, no Flexbox, no security fixes). | Still HTML and CSS in, now with Flexbox and Grid: your templates move over. |
+
 ## Why TurboPDF?
 
 Making a PDF in JavaScript usually means **launching a whole browser** to print one page. That is slow and heavy,
@@ -157,7 +170,7 @@ import { Document, Page, Heading, QR, PageNumber }
 |---|---:|---:|
 | 3-page invoice, 200 table rows | **~20 ms** | 700–900 ms |
 | Start-up | **loads one native module** | launches a browser |
-| What you ship | **one ~9 MB engine, fonts included** | a full Chromium |
+| What you ship | **one ~11 MB engine, fonts included** | a full Chromium |
 
 <sub>Measured on Apple Silicon. Browser timings count only printing an already-open page; launching the browser
 is extra. Reproduce with `npm run bench` (reports, invoices up to 8,000 rows, Markdown, a framework-size stylesheet).</sub>
@@ -174,7 +187,7 @@ is extra. Reproduce with `npm run bench` (reports, invoices up to 8,000 rows, Ma
 | Byte-identical output | ✅ | ❌ | ❌ | ❌ |
 | Rows never split, headers repeat | ✅ **built in** | ⚠️ print CSS | ⚠️ manual | ⚠️ print CSS |
 | Tagged PDF / PDF/UA | ✅ **default / one flag** | ⚠️ experimental | ❌ | ❌ |
-| HTML preview of the PDF | ✅ | ❌ | ❌ | ❌ |
+| Preview identical to the downloaded PDF | ✅ **same layout** | ❌ | ❌ | ❌ |
 
 ## Everything included
 
@@ -209,7 +222,7 @@ export async function GET() {
 With **Express**, stream it: `pdf.toStream().pipe(res)`. Renders run on Node's thread pool and never block
 your event loop.
 
-## Preview as HTML, not images
+## A preview that matches the download
 
 ```tsx
 const preview = await pdf.preview();
@@ -218,7 +231,9 @@ const preview = await pdf.preview();
 {preview.pages.map((p) => <div key={p.page} dangerouslySetInnerHTML={{ __html: p.html }} />)}
 ```
 
-Each page is real HTML/CSS, laid out by the same engine as the PDF. You can select text and find it with Ctrl+F,
+Showing an HTML template in the browser and printing it to PDF on the server gives two different documents: page
+breaks, fonts and margins move. Here each preview page is real HTML/CSS drawn from **the very layout that wrote the
+PDF**, computed once: every line and every page break is in the same place. You can select text and find it with Ctrl+F,
 and links work. Fonts are cut down to the glyphs you use, about 200 KB a page. The preview looks the same whether
 you wrote HTML, Markdown or React.
 
