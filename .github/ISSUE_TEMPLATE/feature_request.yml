@@ -1,0 +1,17 @@
+name: Feature request
+description: A CSS property, an element, an option or an output you need.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want to do?
+      description: The document you are trying to produce, and what is missing.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: The HTML / CSS / component you would like to write.
+      render: tsx
