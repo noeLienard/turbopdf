@@ -159,8 +159,8 @@ import { Document, Page, Heading, QR, PageNumber }
 | Start-up | **loads one native module** | launches a browser |
 | What you ship | **one ~9 MB engine, fonts included** | a full Chromium |
 
-<sub>Measured on Apple Silicon with Node 20. Browser timings count only printing an already-open page; launching the browser
-is extra.</sub>
+<sub>Measured on Apple Silicon. Browser timings count only printing an already-open page; launching the browser
+is extra. Reproduce with `npm run bench` (reports, invoices up to 8,000 rows, Markdown, a framework-size stylesheet).</sub>
 
 ## How it compares
 
