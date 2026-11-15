@@ -1,0 +1,60 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/papier-tree",
+  "crates/papier-fonts",
+  "crates/papier-text",
+  "crates/papier-layout",
+  "crates/papier-pdf",
+  "crates/papier-raster",
+  "crates/papier-html",
+  "crates/papier-engine",
+  "crates/papier-node",
+  "crates/papier-wasm",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.92"
+repository = "https://github.com/papier-dev/papier"
+
+[workspace.dependencies]
+# interne
+papier-tree   = { path = "crates/papier-tree" }
+papier-fonts  = { path = "crates/papier-fonts" }
+papier-text   = { path = "crates/papier-text" }
+papier-layout = { path = "crates/papier-layout" }
+papier-pdf    = { path = "crates/papier-pdf" }
+papier-raster = { path = "crates/papier-raster" }
+papier-html = { path = "crates/papier-html" }
+papier-engine = { path = "crates/papier-engine" }
+
+# données
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror  = "2"
+ts-rs      = { version = "12", features = ["serde-compat"] }
+
+# moteur
+taffy      = { version = "0.15", default-features = false, features = ["std", "taffy_tree", "flexbox", "grid", "block_layout", "content_size"] }
+rustybuzz  = "0.20"
+hypher     = "0.1"
+krilla     = { version = "0.8", default-features = false, features = ["raster-images"] }
+tiny-skia  = "0.12"
+base64     = "0.22"
+jpeg-decoder = { version = "0.3", default-features = false }
+# SVG: parsed once (usvg), drawn as vectors in the PDF (krilla-svg) and rasterized for previews (resvg).
+usvg       = { version = "0.47", default-features = false, features = ["text"] }
+resvg      = { version = "0.47", default-features = false, features = ["text"] }
+krilla-svg = "0.8"
+image-webp = "0.2"
+gif        = "0.14"
+# à venir : napi / napi-derive = "3" (binding Node), wasm-bindgen = "0.2" (binding WebAssembly)
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# no `panic = "abort"`: inside Node (napi) or a browser (wasm) a panic must become an error, not kill the host

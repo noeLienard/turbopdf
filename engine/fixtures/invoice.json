@@ -1,0 +1,74 @@
+{
+  "type": "document",
+  "version": 1,
+  "meta": { "title": "Invoice 2026-042", "author": "Atelier Lumière", "lang": "fr" },
+  "defaultStyle": { "fontFamily": "Inter", "fontSize": 10, "color": "#111827" },
+  "children": [
+    {
+      "type": "page",
+      "size": "A4",
+      "margin": { "top": 40, "right": 36, "bottom": 40, "left": 36 },
+      "header": [
+        {
+          "type": "view",
+          "style": { "flexDirection": "row", "justifyContent": "space-between", "borderRadius": 0 },
+          "children": [
+            { "type": "text", "style": { "fontWeight": 700, "color": "#2563eb" }, "content": "Atelier Lumière" },
+            { "type": "text", "style": { "color": "#6b7280" }, "content": "Invoice 2026-042" }
+          ]
+        }
+      ],
+      "footer": [
+        { "type": "page_number", "format": "Page {page} / {pages}", "style": { "textAlign": "center", "color": "#6b7280", "fontSize": 8 } }
+      ],
+      "children": [
+        { "type": "heading", "level": 1, "style": { "color": "#2563eb" }, "content": "Invoice #2026-042" },
+        {
+          "type": "view",
+          "keepTogether": true,
+          "style": { "flexDirection": "row", "gap": 24, "margin": { "top": 8, "bottom": 16 } },
+          "children": [
+            { "type": "text", "style": { "flexGrow": 1 }, "content": [{ "text": "Billed to\n", "style": { "fontWeight": 600 } }, { "text": "Société Exemple SAS" }] },
+            { "type": "text", "style": { "width": 120, "textAlign": "right" }, "content": "15 Nov 2026" }
+          ]
+        },
+        {
+          "type": "table",
+          "columns": [{ "width": "55%" }, { "width": 50, "align": "center" }, { "align": "right" }, { "align": "right" }],
+          "headerStyle": { "backgroundColor": "#2563eb", "color": "#ffffff", "fontWeight": 600, "padding": 6 },
+          "cellStyle": { "padding": 6, "border": { "width": 0.5, "color": "#e5e7eb" } },
+          "altRowStyle": { "backgroundColor": "#eff6ff" },
+          "header": [
+            { "cells": [
+              { "children": [{ "type": "text", "content": "Description" }] },
+              { "children": [{ "type": "text", "content": "Qty" }] },
+              { "children": [{ "type": "text", "content": "Unit price" }] },
+              { "children": [{ "type": "text", "content": "Total" }] }
+            ] }
+          ],
+          "rows": [
+            { "id": "row-logo", "cells": [
+              { "children": [{ "type": "text", "content": "Logo design" }] },
+              { "children": [{ "type": "text", "content": "1" }] },
+              { "children": [{ "type": "text", "content": "450,00 €" }] },
+              { "children": [{ "type": "text", "content": "450,00 €" }] }
+            ] },
+            { "cells": [
+              { "children": [{ "type": "text", "content": "Brand guidelines (20 pages)" }] },
+              { "children": [{ "type": "text", "content": "1" }] },
+              { "children": [{ "type": "text", "content": "1 200,00 €" }] },
+              { "children": [{ "type": "text", "content": "1 200,00 €" }] }
+            ] },
+            { "cells": [
+              { "colSpan": 3, "style": { "textAlign": "right", "fontWeight": 700 }, "children": [{ "type": "text", "content": "Total" }] },
+              { "style": { "fontWeight": 700 }, "children": [{ "type": "text", "content": "1 650,00 €" }] }
+            ] }
+          ]
+        },
+        { "type": "page_break" },
+        { "type": "heading", "level": 2, "content": "Terms" },
+        { "type": "text", "content": "Payment within 30 days by bank transfer." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+[package]
+name = "papier-node"
+description = "Node.js binding of the Papier engine (napi-rs)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+papier-engine.workspace = true
+serde_json.workspace = true
+napi = { version = "3", default-features = false, features = ["napi6"] }
+napi-derive = "3"
+
+[build-dependencies]
+napi-build = "2"

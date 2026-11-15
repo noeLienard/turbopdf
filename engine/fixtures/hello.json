@@ -1,0 +1,14 @@
+{
+  "type": "document",
+  "version": 1,
+  "meta": { "title": "Hello", "lang": "en" },
+  "children": [
+    {
+      "type": "page",
+      "children": [
+        { "type": "heading", "level": 1, "content": "Hello Papier" },
+        { "type": "text", "content": "What you see is what you download." }
+      ]
+    }
+  ]
+}

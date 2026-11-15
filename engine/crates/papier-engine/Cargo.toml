@@ -1,0 +1,26 @@
+[package]
+name = "papier-engine"
+description = "Papier rendering engine: document tree in, PDF + PNG previews + warnings out."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+papier-tree.workspace = true
+papier-fonts.workspace = true
+papier-layout.workspace = true
+papier-pdf.workspace = true
+papier-raster.workspace = true
+papier-html.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+papier-text.workspace = true
+
+[dev-dependencies]
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+ttf-parser = "0.25"
+rqrr = "0.9"
+tiny-skia.workspace = true
+serde_json.workspace = true
+papier-layout.workspace = true
+papier-pdf.workspace = true

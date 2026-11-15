@@ -1,0 +1,19 @@
+[package]
+name = "papier-pdf"
+description = "PDF writer (krilla). Deterministic: same layout, same bytes."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+papier-tree.workspace = true
+papier-fonts.workspace = true
+papier-layout.workspace = true
+krilla.workspace = true
+krilla-svg.workspace = true
+rustybuzz.workspace = true
+papier-text.workspace = true
+thiserror.workspace = true
+# Not used directly: enabling `zlib-rs` switches krilla's deflate from miniz_oxide to zlib-rs
+# (pure Rust, wasm-friendly, ~2-3x faster). Compression was 65% of PDF time.
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }

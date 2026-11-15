@@ -1,0 +1,109 @@
+{
+  "type": "document",
+  "version": 1,
+  "meta": {
+    "title": "Features"
+  },
+  "children": [
+    {
+      "type": "page",
+      "watermark": {
+        "text": "BROUILLON"
+      },
+      "footer": [
+        {
+          "type": "page_number",
+          "format": "{page} / {pages}"
+        }
+      ],
+      "children": [
+        {
+          "type": "heading",
+          "level": 1,
+          "content": "Sommaire"
+        },
+        {
+          "type": "table_of_contents",
+          "levels": 2
+        },
+        {
+          "type": "view",
+          "style": {
+            "height": 60,
+            "backgroundColor": "#f3f4f6"
+          },
+          "children": [
+            {
+              "type": "text",
+              "content": [
+                {
+                  "text": "Voir "
+                },
+                {
+                  "text": "le site",
+                  "link": "https://example.com",
+                  "style": {
+                    "color": "#2563eb"
+                  }
+                },
+                {
+                  "text": " ou "
+                },
+                {
+                  "text": "les prix",
+                  "link": "#prix"
+                }
+              ]
+            },
+            {
+              "type": "view",
+              "style": {
+                "position": "absolute",
+                "top": 4,
+                "right": 4,
+                "width": 50,
+                "height": 20,
+                "backgroundColor": "#dc2626"
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": {
+            "data": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDYwIDIwIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iMjAiIHJ4PSI0IiBmaWxsPSIjMjU2M2ViIi8+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iNiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg=="
+          },
+          "format": "svg",
+          "link": "https://example.com"
+        },
+        {
+          "type": "page_number",
+          "target": "prix",
+          "format": "prix page {page}"
+        },
+        {
+          "type": "page_break"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Introduction"
+        },
+        {
+          "type": "text",
+          "content": "Texte."
+        },
+        {
+          "type": "page_break"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "id": "prix",
+          "content": "Prix"
+        }
+      ]
+    }
+  ]
+}

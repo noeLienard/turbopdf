@@ -1,0 +1,6 @@
+node_modules
+dist
+*.tsbuildinfo
+examples/out
+native/
+.scratch/
