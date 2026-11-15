@@ -39,6 +39,7 @@ engine/crates/turbopdf-markup  HTML (html5ever) + CSS cascade → document tree
 src/rust/native.ts loads native/turbopdf.<platform>-<arch>.node
 src/cli/           `turbopdf dev`
 engine/            the Rust engine (see engine/README.md)
+bench/run.ts       reference benchmark (`npm run bench`)
 test/              one file per theme (options, fonts, pagebreak, warnings…)
 ```
 
@@ -49,6 +50,8 @@ test/              one file per theme (options, fonts, pagebreak, warnings…)
 - **Warnings are returned, never thrown.** A render should still give a PDF.
 - **Every option has a test.** Prove behavior on the PDF itself (page count, text per page, pixels), not on internal state. Helpers are in `test/helpers.ts`.
 - A bug fix starts with a failing test.
+- **Performance:** run `npm run bench` before and after a change to the engine or the HTML/CSS converter, on the same
+  machine, and put both tables in the PR.
 - Tests that need a server use a local one (`serve()` in the helpers); never rely on the internet.
 - Keep dependencies few. React stays an optional peer dependency.
 - Commit messages: short, imperative (`Fix footer margin when only header is set`).
