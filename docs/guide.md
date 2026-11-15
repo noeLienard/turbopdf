@@ -333,7 +333,7 @@ npx turbopdf dev ./report.md
 npx turbopdf dev ./page.html
 ```
 
-Opens a local page showing the real PDF, page by page. It refreshes every time you save the file, lists the warnings, and has a download button. In a `.tsx` file you can also `export const options = { format: 'A5', margin: '12mm' }`.
+Opens a local page showing the real PDF, page by page. It refreshes every time you save the file, lists the warnings, and has a download button. In a `.tsx` file you can also `export const options = { format: 'A5', margin: '12mm' }`. Previewing a `.tsx` / `.jsx` file needs `tsx` in your project (`npm install --save-dev tsx`); `.html` and `.md` files need nothing.
 
 ## Warnings
 

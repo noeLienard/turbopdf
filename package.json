@@ -92,7 +92,8 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "react-dom": ">=18"
+    "react-dom": ">=18",
+    "tsx": ">=4"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -100,11 +101,13 @@
     },
     "react-dom": {
       "optional": true
+    },
+    "tsx": {
+      "optional": true
     }
   },
   "dependencies": {
-    "markdown-it": "^15.0.3",
-    "tsx": "^4.23.15"
+    "markdown-it": "^15.0.3"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",
@@ -115,6 +118,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
     "typescript": "~5.9",
     "vitest": "^5.1.0"
   },

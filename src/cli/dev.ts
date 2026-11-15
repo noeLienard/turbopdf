@@ -49,7 +49,13 @@ async function loadSource(file: string, tsconfig: () => string): Promise<CreateO
     throw new TurboPdfError('invalid_source', `Unsupported file type "${ext}". Use a .tsx/.jsx component, an .html file or a .md file.`);
   }
 
-  const { tsImport } = await import('tsx/esm/api');
+  // tsx compiles .tsx / .jsx on the fly. Only `turbopdf dev` needs it, so it is an optional peer dependency.
+  let tsImport: typeof import('tsx/esm/api').tsImport;
+  try {
+    ({ tsImport } = await import('tsx/esm/api'));
+  } catch (cause) {
+    throw new TurboPdfError('invalid_source', `Previewing a ${ext} file needs tsx to compile it. Run: npm install --save-dev tsx`, { cause });
+  }
   const mod = (await tsImport(`${pathToFileURL(file).href}?v=${++revCounter}`, { parentURL: import.meta.url, tsconfig: tsconfig() })) as {
     default?: unknown;
     options?: Extra;

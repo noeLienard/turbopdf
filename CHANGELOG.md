@@ -44,6 +44,10 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 - An absolutely positioned child anchored with `right` / `bottom` inside a `flexGrow` box is placed in that box
   (it used to be pushed out of it and disappear).
 - `margin` accepts numbers (CSS pixels): `margin: 0` used to fall back to 10mm.
+- CSS cascade: rules are indexed by id, class and tag like in browsers, so an element only tests the selectors
+  that can match it. A 9,000-rule stylesheet over 4,000 elements: 9.8 s → 0.12 s.
+- `tsx` is no longer installed with turbopdf (it pulled esbuild, ~10 MB). It is an optional peer dependency, only
+  needed by `turbopdf dev` for `.tsx` / `.jsx` files.
 - `pdfua: true`: PDF/UA-1 conformance (validated while writing). Error code `not_accessible`, warning
   `missing_alt`. `title` and `lang` options; Markdown takes its title from the first `# heading`.
 - Warnings `moved_to_next_page`, `missing_glyph`, `stylesheet_failed`, `font_failed`, `broken_link`; warnings
