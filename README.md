@@ -37,73 +37,19 @@ const pdf = await turbopdf.create('<h1>Hello, PDF 👋</h1>');
 await pdf.save('hello.pdf');
 ```
 
-That's the whole setup. You don't download Chrome, build a Docker image or babysit a headless browser.
-
 ## The problems it solves
 
 | You have this problem | TurboPDF |
 |---|---|
-| 👀 **The preview in your app is not the PDF people download.** Page breaks, fonts and margins move between the two. | `pdf.preview()` is HTML drawn from **the same layout as the PDF**: same lines, same page breaks, same positions. What users see is what they download. |
-| 🐘 **Chrome eats memory**, leaves zombie processes and bloats your Docker image. | No browser. One native module (~11 MB, fonts included). |
-| 🥶 **Slow cold starts and timeouts on serverless.** | Nothing to launch. Each render takes a few milliseconds. |
-| 🕳️ **User HTML can reach your network or your files** (SSRF, `file://`). | No network, no scripts. Files are read only inside `baseDir`. |
-| 🎲 **It looks different locally and in production.** | Same input, same bytes, on every machine. System fonts are never used. |
+| 👀 **The preview in your app is not the PDF people download.** Page breaks, fonts and margins move. | The preview is drawn from **the same layout as the PDF**. [See below](#a-preview-that-matches-the-download). |
+| 🐘 **Chrome eats memory**, leaves zombie processes and bloats your Docker image. | No browser: one native module (~11 MB, fonts included). |
+| 🥶 **Slow cold starts and timeouts on serverless.** | Nothing to launch. A 3-page invoice renders in **~20 ms**, about 40× faster than a headless browser. |
+| 🕳️ **User or AI-generated HTML can reach your network or files** (SSRF, `file://`). | No network, no scripts. Files are read only inside `baseDir`. |
+| 🎲 **It looks different locally and in production.** | Same input, same bytes, on every machine: snapshot-test your PDFs. |
 | 🔤 **A font is replaced without warning.** | `missing_glyph` and `font_failed` warnings name the character or file and say what to do. |
-| ✂️ **Table rows cut in half, headers lost on page 2.** | Rows are never split, and table headers repeat on every page by default. |
+| ✂️ **Table rows cut in half, headers lost on page 2.** | Rows are never split, and table headers repeat on every page. |
+| ♿ **Accessibility laws (European Accessibility Act) require accessible PDFs.** | Every PDF is tagged for screen readers. `pdfua: true` gives **PDF/UA-1**. |
 | 🧓 **Stuck on wkhtmltopdf** (archived, no Flexbox, no security fixes). | Still HTML and CSS in, now with Flexbox and Grid: your templates move over. |
-
-## Why TurboPDF?
-
-Making a PDF in JavaScript usually means **launching a whole browser** to print one page. That is slow and heavy,
-it is painful to deploy on serverless, and every request runs page scripts. TurboPDF replaces the browser with a
-purpose-built document engine written in Rust. It does Flexbox, Grid, text shaping, hyphenation and pagination.
-
-- ⚡ **About 40× faster.** A 3-page invoice with 200 rows renders in about **20 ms**. A headless browser needs
-  0.7–0.9 s for the same file.
-- 🪶 **Nothing else to install.** No Chromium, no system fonts, no Dockerfile. The Inter font is built in.
-- 🔒 **Safe for user HTML.** Scripts never run, nothing is fetched over the network, and files are read only
-  inside `baseDir`.
-- 🎯 **Deterministic.** The same input gives the same bytes on macOS, Linux and WebAssembly, so you can snapshot-test
-  your PDFs.
-- 📄 **Built for documents.** Table rows are never cut in half and headers repeat on every page. Page numbers,
-  `see page 4` references, a table of contents, bookmarks and watermarks are built in.
-- ♿ **Accessible by default.** Every PDF is tagged for screen readers. One flag gives you **PDF/UA-1**, the standard
-  behind the European Accessibility Act.
-- 🤖 **AI-native.** Models already write HTML, Markdown and React well, and TurboPDF takes all three. Your assistant writes
-  PDFs without learning anything new. [See below](#-ai-native).
-- 🧩 **One API, four sources**: HTML/CSS, React, Markdown, or a typed document tree.
-
-## 🤖 AI-native
-
-TurboPDF is designed so an AI assistant (Claude, Cursor, Copilot…) can add PDF generation to your app in one prompt,
-and so an AI agent can produce documents on its own.
-
-- **One function, no setup.** `create(source)` → `save()` / `toResponse()`. There is no browser to install or
-  configure, so the assistant has nothing to get wrong.
-- **`llms.txt` is included.** The whole API, the CSS that works and the common pitfalls fit on one page, in
-  [`llms.txt`](llms.txt) (also shipped in the npm package). Point your assistant at it:
-  *"Use turbopdf, read node_modules/turbopdf/llms.txt"*.
-- **Formats models already know.** HTML/CSS, Markdown and React need no new DSL to learn. A model can also emit
-  the **JSON document tree** directly, typed in `turbopdf/tree`.
-- **Errors a model can fix by itself.** Each warning says what went wrong, where, and how to fix it. Invalid trees
-  list every problem with its JSON path. Feed them back and render again.
-- **It can see its own output.** `pdf.toPng()` gives an image of each page for multimodal models to check, and
-  `pdf.preview()` gives HTML for chat UIs.
-- **Safe for AI-generated content.** Model output is untrusted input. TurboPDF never runs scripts, never makes network
-  requests, and reads files only inside `baseDir`. A prompt-injected document has nothing to call and nowhere to send data.
-- **Fast enough for agent loops.** Each render takes milliseconds, so an agent can draft, check and fix many times
-  in a second.
-
-```ts
-// An agent's self-correcting loop
-let html = await model.write('A one-page invoice for Acme, 3 items');
-for (let i = 0; i < 3; i++) {
-  const pdf = await turbopdf.create({ html });
-  if (pdf.warnings.length === 0) return pdf;
-  const [page] = await pdf.toPng({ scale: 1 });
-  html = await model.fix(html, pdf.warnings.map((w) => w.message), page.toDataUrl());
-}
-```
 
 ## Write it your way
 
@@ -164,46 +110,72 @@ import { Document, Page, Heading, QR, PageNumber }
 </td></tr>
 </table>
 
-## Benchmarks
+## A preview that matches the download
 
-| | TurboPDF | Headless Chrome |
-|---|---:|---:|
-| 3-page invoice, 200 table rows | **~20 ms** | 700–900 ms |
-| Start-up | **loads one native module** | launches a browser |
-| What you ship | **one ~11 MB engine, fonts included** | a full Chromium |
+```tsx
+const preview = await pdf.preview();
 
-<sub>Measured on Apple Silicon. Browser timings count only printing an already-open page; launching the browser
-is extra. Reproduce with `npm run bench` (reports, invoices up to 8,000 rows, Markdown, a framework-size stylesheet).</sub>
+<style dangerouslySetInnerHTML={{ __html: preview.style }} />
+{preview.pages.map((p) => <div key={p.page} dangerouslySetInnerHTML={{ __html: p.html }} />)}
+```
 
-## How it compares
+Showing an HTML template in the browser and printing it to PDF on the server gives two different documents: page
+breaks, fonts and margins move. Here each preview page is real HTML/CSS drawn from **the very layout that wrote the
+PDF**, computed once: every line and every page break is in the same place. You can select text and find it with Ctrl+F,
+and links work. Fonts are cut down to the glyphs you use, about 200 KB a page. The preview looks the same whether
+you wrote HTML, Markdown or React.
+
+## 🤖 AI-native
+
+An AI assistant (Claude, Cursor, Copilot…) can add PDF generation to your app in one prompt, and an agent can
+produce documents on its own.
+
+- **`llms.txt` is included.** The whole API, the CSS that works and the common pitfalls on one page, also shipped in
+  the npm package: *"Use turbopdf, read node_modules/turbopdf/llms.txt"*.
+- **Formats models already know.** HTML/CSS, Markdown and React, or the typed **JSON document tree** (`turbopdf/tree`).
+  No new DSL to learn.
+- **A loop it can close by itself.** Every warning says what is wrong, where, and how to fix it; invalid trees list
+  each problem with its JSON path. `pdf.toPng()` lets a multimodal model look at the result.
+
+```ts
+// An agent's self-correcting loop
+let html = await model.write('A one-page invoice for Acme, 3 items');
+for (let i = 0; i < 3; i++) {
+  const pdf = await turbopdf.create({ html });
+  if (pdf.warnings.length === 0) return pdf;
+  const [page] = await pdf.toPng({ scale: 1 });
+  html = await model.fix(html, pdf.warnings.map((w) => w.message), page.toDataUrl());
+}
+```
+
+## vs. the alternatives
 
 | | **TurboPDF** | Puppeteer / Playwright | React-pdf | wkhtmltopdf |
 |---|---|---|---|---|
-| HTML & CSS input | ✅ **native engine** | ✅ through Chromium | ❌ | ⚠️ old QtWebKit, no Flexbox/Grid |
-| React input | ✅ **your own components** | ✅ through SSR | ✅ its own primitives | ⚠️ through SSR |
+| 3-page invoice, 200 rows | **~20 ms** | 700–900 ms | – | – |
+| HTML & CSS input | ✅ **Flexbox, Grid** | ✅ through Chromium | ❌ | ⚠️ old QtWebKit, no Flexbox/Grid |
+| React input | ✅ **your own components** | ✅ through SSR | ⚠️ its own primitives | ⚠️ through SSR |
 | Markdown input | ✅ | ❌ | ❌ | ❌ |
-| Runs without a browser | ✅ | ❌ | ✅ | ❌ embedded WebKit |
-| Safe with untrusted input | ✅ **no scripts, no network** | ⚠️ needs hardening | – | ❌ archived, unpatched |
-| Byte-identical output | ✅ | ❌ | ❌ | ❌ |
-| Rows never split, headers repeat | ✅ **built in** | ⚠️ print CSS | ⚠️ manual | ⚠️ print CSS |
+| Needs a browser | **no** | yes | no | embedded WebKit |
 | Tagged PDF / PDF/UA | ✅ **default / one flag** | ⚠️ experimental | ❌ | ❌ |
-| Preview identical to the downloaded PDF | ✅ **same layout** | ❌ | ❌ | ❌ |
+| Maintained | ✅ | ✅ | ✅ | ❌ archived |
+
+<sub>Measured on Apple Silicon; browser timings count only printing an already-open page. Reproduce with
+`npm run bench`.</sub>
 
 ## Everything included
 
 | | |
 |---|---|
 | 🎨 **CSS** | Flexbox, Grid (`fr`, `repeat()`), `calc()`, `var()`, `@page`, `@media print`, `::before`/`::after`, `position: absolute`, `@font-face` |
-| 🔤 **Text** | Real shaping (kerning, ligatures), hyphenation from `lang`, your own TTF/OTF fonts |
+| 🔤 **Text** | Real shaping (kerning, ligatures), hyphenation from `lang`, your own TTF/OTF fonts. Inter is built in |
 | 🖼️ **Images** | PNG, JPEG, WebP, GIF, and SVG kept as **vectors**, including inline `<svg>` |
 | 🔳 **QR codes** | `<img src="qr:…">`, `![](qr:…)` or `<QR>`, drawn as vectors: SEPA/EPC payments, tickets, links |
 | 📑 **Long documents** | Headers and footers with `{page}/{pages}`, table of contents, `see page N`, bookmarks, page breaks, keep-together |
 | 🔗 **Links** | External links and internal `#id` jumps, clickable in the PDF |
 | 💧 **Stamps** | `watermark: 'PAID'` on every page |
-| ♿ **Accessibility** | Tagged PDF by default. `pdfua: true` checks the title, language, alt text and that every character has a glyph |
-| 👀 **Preview** | `pdf.preview()` returns real HTML/CSS (selectable text, working links, light fonts), and `pdf.toPng()` returns images |
 | 🔥 **Live reload** | `npx turbopdf dev invoice.tsx` renders the PDF again on every save |
-| ⚠️ **Warnings, not crashes** | Overflow, missing glyph, broken link… each warning says how to fix it. Use `strict: true` in CI |
+| 🚦 **CI** | `strict: true` turns warnings into errors |
 
 ## Ship it
 
@@ -222,21 +194,6 @@ export async function GET() {
 With **Express**, stream it: `pdf.toStream().pipe(res)`. Renders run on Node's thread pool and never block
 your event loop.
 
-## A preview that matches the download
-
-```tsx
-const preview = await pdf.preview();
-
-<style dangerouslySetInnerHTML={{ __html: preview.style }} />
-{preview.pages.map((p) => <div key={p.page} dangerouslySetInnerHTML={{ __html: p.html }} />)}
-```
-
-Showing an HTML template in the browser and printing it to PDF on the server gives two different documents: page
-breaks, fonts and margins move. Here each preview page is real HTML/CSS drawn from **the very layout that wrote the
-PDF**, computed once: every line and every page break is in the same place. You can select text and find it with Ctrl+F,
-and links work. Fonts are cut down to the glyphs you use, about 200 KB a page. The preview looks the same whether
-you wrote HTML, Markdown or React.
-
 ## Documentation
 
 📖 **[The full guide](docs/guide.md)**: every option, supported HTML and CSS, Markdown, components, QR codes,
@@ -253,7 +210,7 @@ Issues and PRs are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then:
 npm install && npm run build:native && npm run check
 ```
 
-If TurboPDF spared you from shipping a browser, **⭐ star the repo**. It helps other people find it.
+If TurboPDF helped you, **⭐ star the repo**: it helps other people find it.
 
 ## License
 
