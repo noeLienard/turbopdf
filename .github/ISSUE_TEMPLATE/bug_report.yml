@@ -1,0 +1,26 @@
+name: Bug report
+description: Something renders wrong, a warning is misleading, or an error is thrown.
+labels: [bug]
+body:
+  - type: textarea
+    id: input
+    attributes:
+      label: Smallest input that shows the problem
+      description: The HTML, React, Markdown or tree, and the options passed to `create()`.
+      render: tsx
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what you got
+      description: A screenshot of the PDF (or `pdf.toPng()`) helps a lot. Include `pdf.warnings` if any.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Versions
+      placeholder: turbopdf 0.1.0, Node 22, macOS arm64
+    validations:
+      required: true
