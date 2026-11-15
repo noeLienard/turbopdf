@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Alex Morgan — Résumé</title>
+<style>
+  @page { size: A4; margin: 0; }
+  @font-face { font-family: Display; src: url(fonts/DMSerifDisplay-Regular.ttf); }
+  :root { --ink: #1c1917; --muted: #78716c; --line: #e7e5e4; --accent: #c2410c; --side: #fafaf9; }
+  body { font-family: Inter; color: var(--ink); font-size: 9pt; line-height: 1.5; }
+
+  .page { display: grid; grid-template-columns: 200px 1fr; min-height: 1122px; }
+  aside { background: var(--side); border-right: 1px solid var(--line); padding: 48px 26px; }
+  main { padding: 48px 44px 40px 40px; }
+
+  .avatar { width: 64px; height: 64px; border-radius: 32px; background: var(--accent); color: #fff; font-family: Display; font-size: 26pt; display: flex; align-items: center; justify-content: center; margin-bottom: 26px; }
+  a { color: var(--ink); }
+  aside h3 { font-size: 7.5pt; font-weight: 700; color: var(--accent); margin: 22px 0 8px; }
+  .contact div { margin-bottom: 5px; }
+  .contact .k { color: var(--muted); font-size: 7.5pt; margin-bottom: 0; }
+  .skill { margin-bottom: 8px; }
+  .skill .name { display: flex; justify-content: space-between; font-size: 8.5pt; margin-bottom: 3px; }
+  .track { height: 4px; border-radius: 2px; background: var(--line); }
+  .fill { height: 4px; border-radius: 2px; background: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 2px 7px; font-size: 7.5pt; }
+
+  h1 { font-family: Display; font-weight: 400; font-size: 36pt; line-height: 1.05; margin: 0; }
+  .role { color: var(--accent); font-weight: 600; font-size: 11pt; margin: 6px 0 14px; }
+  .summary { color: #44403c; font-size: 9.5pt; margin: 0 0 8px; }
+  h2 { font-size: 8pt; font-weight: 700; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--line); margin: 24px 0 14px; }
+
+  .job { display: grid; grid-template-columns: 1fr auto; margin-bottom: 16px; }
+  .job .title { font-weight: 700; font-size: 10pt; }
+  .job .company { color: var(--accent); font-weight: 600; }
+  .job .when { color: var(--muted); font-size: 8pt; text-align: right; }
+  .job ul { grid-column: 1 / 3; margin: 6px 0 0; padding-left: 14px; color: #44403c; }
+  .job li { margin-bottom: 3px; }
+
+  .projects { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .project { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .pname { font-weight: 700; margin-bottom: 2px; }
+  .pdesc { color: var(--muted); font-size: 8pt; }
+</style>
+</head>
+<body>
+<div class="page">
+  <aside>
+    <div class="avatar">A</div>
+
+    <h3>CONTACT</h3>
+    <div class="contact">
+      <div class="k">Email</div><div><a href="mailto:alex@morgan.dev">alex@morgan.dev</a></div>
+      <div class="k">Website</div><div><a href="https://morgan.dev">morgan.dev</a></div>
+      <div class="k">GitHub</div><div>github.com/alexmorgan</div>
+      <div class="k">Location</div><div>Seattle, WA</div>
+    </div>
+
+    <h3>SKILLS</h3>
+    <div class="skill"><div class="name"><span>Rust</span></div><div class="track"><div class="fill" style="width:95%"></div></div></div>
+    <div class="skill"><div class="name"><span>TypeScript</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+    <div class="skill"><div class="name"><span>Distributed systems</span></div><div class="track"><div class="fill" style="width:80%"></div></div></div>
+    <div class="skill"><div class="name"><span>Machine learning</span></div><div class="track"><div class="fill" style="width:65%"></div></div></div>
+
+    <h3>TOOLS</h3>
+    <div class="chips"><span class="chip">Kubernetes</span><span class="chip">Postgres</span><span class="chip">Kafka</span><span class="chip">WebAssembly</span><span class="chip">React</span><span class="chip">gRPC</span></div>
+
+    <h3>LANGUAGES</h3>
+    <div class="contact"><div>English, native</div><div>Spanish, fluent</div><div>Japanese, conversational</div></div>
+  </aside>
+
+  <main>
+    <h1>Alex Morgan</h1>
+    <div class="role">Staff Software Engineer · Systems & Infrastructure</div>
+    <p class="summary">Engineer with 10 years of experience building fast, reliable infrastructure. I like hard performance problems,
+      small teams and tools that developers love. Led the rewrite of a storage engine now serving 2 billion requests a day.</p>
+
+    <h2>EXPERIENCE</h2>
+    <div class="job">
+      <div><div class="title">Staff Software Engineer</div><div class="company">Cascade Cloud</div></div>
+      <div class="when">2022 — Present<br />Seattle</div>
+      <ul>
+        <li>Led a team of 6 rewriting the object storage engine in Rust: p99 latency down 74%, hardware costs down 38%.</li>
+        <li>Designed the multi-region replication protocol now used by every product team.</li>
+        <li>Mentored 9 engineers; 4 were promoted to senior.</li>
+      </ul>
+    </div>
+    <div class="job">
+      <div><div class="title">Senior Software Engineer</div><div class="company">Brightline Payments</div></div>
+      <div class="when">2019 — 2022<br />San Francisco</div>
+      <ul>
+        <li>Built the real-time fraud scoring service: 40k transactions per second at under 8 ms.</li>
+        <li>Moved the ledger to an event-sourced architecture with zero downtime.</li>
+      </ul>
+    </div>
+    <div class="job">
+      <div><div class="title">Software Engineer</div><div class="company">Pixelworks Studio</div></div>
+      <div class="when">2016 — 2019<br />Austin</div>
+      <ul>
+        <li>Shipped the TypeScript SDK used by 3,000 customer apps and grew its test coverage from 40% to 92%.</li>
+      </ul>
+    </div>
+
+    <h2>OPEN SOURCE</h2>
+    <div class="projects">
+      <div class="project"><div class="pname">quickcache</div><div class="pdesc">Lock-free cache for Rust · 4.2k stars</div></div>
+      <div class="project"><div class="pname">tracekit</div><div class="pdesc">Distributed tracing for Node.js · 1.8k stars</div></div>
+    </div>
+
+    <h2>EDUCATION</h2>
+    <div class="job">
+      <div><div class="title">B.S. Computer Science</div><div class="company">University of Washington</div></div>
+      <div class="when">2012 — 2016</div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

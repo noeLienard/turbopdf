@@ -987,6 +987,31 @@ impl State<'_, '_> {
                 let w = l.size.width;
                 let mut kids: Vec<LNode> =
                     children.iter().map(|c| self.finish(tree, c, w)).collect();
+                // Taffy places an absolute child anchored by `right` / `bottom` against the size its parent had
+                // before flexing (a `flexGrow` box gets it wrong). Anchor it again on the final padding box.
+                let (pad_w, pad_h) = (
+                    w - l.border.left - l.border.right,
+                    l.size.height - l.border.top - l.border.bottom,
+                );
+                for (k, c) in kids.iter_mut().zip(children) {
+                    if !k.meta.absolute {
+                        continue;
+                    }
+                    let cs = match c {
+                        Skel::View { style, .. } | Skel::Leaf { style, .. } => style,
+                    };
+                    let resolve = |d: Option<t::Dimension>, base: f32| match d {
+                        Some(t::Dimension::Points(v)) => Some(v),
+                        Some(t::Dimension::Percent(p)) => Some(base * p / 100.0),
+                        _ => None,
+                    };
+                    if let (None, Some(r)) = (resolve(cs.left, pad_w), resolve(cs.right, pad_w)) {
+                        k.x = w - l.border.right - r - k.w;
+                    }
+                    if let (None, Some(b)) = (resolve(cs.top, pad_h), resolve(cs.bottom, pad_h)) {
+                        k.y = l.size.height - l.border.bottom - b - k.h;
+                    }
+                }
                 let right_limit = w - inset[1];
                 for k in &mut kids {
                     // an absolutely positioned child lives in the padding box (it may cover the padding)

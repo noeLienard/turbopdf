@@ -2,7 +2,10 @@ import type { Document as TreeDocument, Watermark } from './tree';
 
 export type Format = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
-export type Margin = string | { top?: string; right?: string; bottom?: string; left?: string };
+/** A CSS length (`'15mm'`, `'1in'`) or a number of CSS pixels. */
+export type Length = string | number;
+/** One length for every side, or one per side. */
+export type Margin = Length | { top?: Length; right?: Length; bottom?: Length; left?: Length };
 
 /** Minimal structural type so TurboPDF never depends on @types/react. */
 export interface ReactElementLike {

@@ -13,12 +13,14 @@ A native Rust layout engine behind a tiny TypeScript API, **built to be written 
 ![PDF/UA-1](https://img.shields.io/badge/PDF%2FUA--1-ready-2ea44f)
 [![AI-native: llms.txt](https://img.shields.io/badge/AI--native-llms.txt-8a2be2)](llms.txt)
 
-<img src=".github/assets/facture.png" width="40%" alt="An invoice written in React and CSS, rendered by TurboPDF" />
-<img src=".github/assets/devis.png" width="40%" alt="A quote written with TurboPDF components, with a diagonal watermark" />
+<a href=".github/assets/invoice.pdf"><img src=".github/assets/invoice.png" width="32%" alt="An invoice written in React, with a QR code to pay" /></a>
+<a href=".github/assets/report.pdf"><img src=".github/assets/report.png" width="32%" alt="A quarterly report in HTML and CSS, with SVG charts" /></a>
+<a href=".github/assets/resume.pdf"><img src=".github/assets/resume.png" width="32%" alt="A two-column résumé in HTML and CSS" /></a>
 <br/>
-<img src=".github/assets/billet.png" width="80%" alt="A concert ticket with a native QR code, rendered from a document tree" />
+<a href=".github/assets/ticket.pdf"><img src=".github/assets/ticket.png" width="80%" alt="A conference pass built with TurboPDF components and a native QR code" /></a>
 
-<sub>Real output, unretouched: an invoice in React + CSS, a quote built with components, a ticket with a native QR code.</sub>
+<sub>Real output, not retouched. Click one for its PDF, or read its source in
+<a href="examples/showcase">examples/showcase</a>: an invoice in <a href="examples/showcase/invoice.tsx">React</a>, a report with SVG charts in <a href="examples/showcase/report.html">HTML</a>, a résumé in <a href="examples/showcase/resume.html">HTML</a>, and a pass built with <a href="examples/showcase/ticket.tsx">components</a>.</sub>
 
 </div>
 

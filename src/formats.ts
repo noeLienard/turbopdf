@@ -1,5 +1,5 @@
 import { TurboPdfError } from './errors';
-import type { Format, Margin, Orientation } from './types';
+import type { Format, Length, Margin, Orientation } from './types';
 
 /** Portrait size in millimetres. */
 const SIZES_MM: Record<Format, [number, number]> = {
@@ -22,11 +22,11 @@ export function toPx(value: string | number): number {
   return Number(m[1]) * UNITS_PX[(m[2] ?? 'px').toLowerCase()]!;
 }
 
-export interface Sides { top: string; right: string; bottom: string; left: string }
+export interface Sides { top: Length; right: Length; bottom: Length; left: Length }
 
 export function normalizeMargin(margin: Margin | undefined): Sides {
   if (margin === undefined) margin = '10mm';
-  if (typeof margin === 'string') return { top: margin, right: margin, bottom: margin, left: margin };
+  if (typeof margin === 'string' || typeof margin === 'number') return { top: margin, right: margin, bottom: margin, left: margin };
   return { top: margin.top ?? '10mm', right: margin.right ?? '10mm', bottom: margin.bottom ?? '10mm', left: margin.left ?? '10mm' };
 }
 

@@ -30,7 +30,7 @@ await turbopdf.create({ tree });                                            // J
 ```
 
 Options (every source): `format` ('A3' | 'A4' | 'A5' | 'Letter' | 'Legal', default A4), `orientation`
-('portrait' | 'landscape'), `width`/`height` (custom size), `margin` ('10mm' default, or { top, right, bottom, left }),
+('portrait' | 'landscape'), `width`/`height` (custom size), `margin` ('10mm' default; a CSS length, a number of CSS pixels, or { top, right, bottom, left }),
 `css`, `header`/`footer` (HTML, `{page}` and `{pages}` are replaced), `fonts` ([{ family, path | data, weight?, style? }]),
 `watermark` ('PAID' or { text, color, fontSize, fontWeight, angle }), `title`, `lang`, `bookmarks` (true),
 `tagged` (true), `pdfua` (false; needs title and lang), `timeout` (30000 ms), `strict` (false), `signal`, `baseDir`.

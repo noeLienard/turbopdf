@@ -93,6 +93,12 @@ describe('option: margin', () => {
     near(firstTextLeft(pdf.toBuffer()), 85);
   });
 
+  it('number margin is in CSS pixels, 0 included', async () => {
+    near(firstTextLeft((await turbopdf.create({ html: '<p>m</p>', margin: 40, css: flat })).toBuffer()), 30);
+    near(firstTextLeft((await turbopdf.create({ html: '<p>m</p>', margin: 0, css: flat })).toBuffer()), 0);
+    near(firstTextLeft((await turbopdf.create({ html: '<p>m</p>', margin: { left: 80, top: 0, right: 0, bottom: 0 }, css: flat })).toBuffer()), 60);
+  });
+
   it('default margin is 10mm (≈ 28pt)', async () => {
     const pdf = await turbopdf.create({ html: '<p>m</p>', css: flat });
     near(firstTextLeft(pdf.toBuffer()), 28.3);

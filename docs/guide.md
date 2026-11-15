@@ -141,7 +141,7 @@ To render a web page, fetch its HTML yourself and pass `{ html, baseDir }`: Turb
 | `format` | `'A4'` | `'A3'` `'A4'` `'A5'` `'Letter'` `'Legal'` |
 | `orientation` | `'portrait'` | or `'landscape'` |
 | `width`, `height` | – | Custom page size (`'100mm'`, `'8in'`, or px). Replaces `format`. |
-| `margin` | `'10mm'` | A CSS length, or `{ top, right, bottom, left }` |
+| `margin` | `'10mm'` | A CSS length (`'15mm'`), a number of CSS pixels, or `{ top, right, bottom, left }` |
 | `css` | – | Extra CSS for `html` and `react`, applied after the document's own |
 | `header`, `footer` | – | HTML repeated on every page. `{page}` and `{pages}` are replaced. See [below](#headers-and-footers). |
 | `fonts` | – | `[{ family, path \| data, weight?, style? }]`: `.ttf` / `.otf` fonts to embed |

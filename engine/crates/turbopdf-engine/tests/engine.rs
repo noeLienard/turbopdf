@@ -1104,6 +1104,21 @@ fn an_absolute_child_may_cover_its_parents_padding() {
 }
 
 #[test]
+fn an_absolute_child_anchored_right_follows_its_flexed_parent() {
+    // the grown box ends 80pt before the row's edge: a child at `right: 10` must stay inside it
+    let d = body(
+        json!([{ "type": "view", "style": { "flexDirection": "row", "height": 120 }, "children": [
+            { "type": "view", "style": { "flexGrow": 1 }, "children": [
+                { "type": "view", "style": { "position": "absolute", "right": 10, "bottom": 10, "width": 60, "height": 60, "backgroundColor": "#ff0000" }, "children": [] },
+            ]},
+            { "type": "view", "style": { "width": 80 }, "children": [] },
+        ]}]),
+    );
+    let out = Engine::new().render(&d).unwrap();
+    assert!(out.warnings.is_empty(), "{:?}", out.warnings);
+}
+
+#[test]
 fn html_preview_is_real_text_with_working_links() {
     let d = body(json!([
         { "type": "text", "content": [{ "text": "Voir " }, { "text": "la suite", "link": "#suite" }, { "text": " & <plus>" }] },

@@ -41,6 +41,9 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
   styles, as in CSS (they used to be merged into one line of text).
 - Markdown links to headings with accents (`[x](#résumé)`) work (markdown-it percent-encoded them).
 - An absolutely positioned child may cover its parent's padding without an `overflow` warning.
+- An absolutely positioned child anchored with `right` / `bottom` inside a `flexGrow` box is placed in that box
+  (it used to be pushed out of it and disappear).
+- `margin` accepts numbers (CSS pixels): `margin: 0` used to fall back to 10mm.
 - `pdfua: true`: PDF/UA-1 conformance (validated while writing). Error code `not_accessible`, warning
   `missing_alt`. `title` and `lang` options; Markdown takes its title from the first `# heading`.
 - Warnings `moved_to_next_page`, `missing_glyph`, `stylesheet_failed`, `font_failed`, `broken_link`; warnings
