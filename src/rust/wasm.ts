@@ -4,7 +4,7 @@
 // `wasm/engine.cjs` (plain JavaScript, shipped next to `turbopdf.wasm`).
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { Worker } from 'node:worker_threads';
+import type { Worker as WorkerType } from 'node:worker_threads';
 import type { NativeDocument, NativeEngine } from './native';
 
 interface Handle {
@@ -28,13 +28,17 @@ const toBuffer = (u8: Uint8Array) => Buffer.from(u8.buffer, u8.byteOffset, u8.by
 export function wasmEngine(dir: string, wasm: Uint8Array<ArrayBuffer>): NativeEngine {
   const script = join(dir, 'engine.cjs');
   const module = new WebAssembly.Module(wasm);
-  const { core } = createRequire(script)(script) as { core(m: WebAssembly.Module): Core };
+  const load = createRequire(script);
+  const { core } = load(script) as { core(m: WebAssembly.Module): Core };
+  // loaded at run time, not imported: bundlers (Turbopack, webpack) treat `new Worker(path)` from a static
+  // import as a worker entry to bundle, and fail on a path only known at run time
+  const { Worker } = load('node:worker_threads') as typeof import('node:worker_threads');
 
   // the sync call (`htmlNodes`, for raw HTML inside Markdown) runs here; it is small and has no files
   let local: Core | undefined;
   const here = () => (local ??= core(module));
 
-  let worker: Worker | undefined;
+  let worker: WorkerType | undefined;
   let next = 0;
   const pending = new Map<number, { resolve(v: unknown): void; reject(e: Error): void }>();
 
