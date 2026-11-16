@@ -1258,7 +1258,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-engine"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "flate2",
@@ -1278,7 +1278,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-fonts"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "rustybuzz",
@@ -1289,7 +1289,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-html"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "flate2",
@@ -1301,7 +1301,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-layout"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "hypher",
@@ -1319,7 +1319,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-markup"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "html5ever",
@@ -1331,7 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-node"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "napi",
  "napi-build",
@@ -1343,7 +1343,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-pdf"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flate2",
  "krilla",
@@ -1358,7 +1358,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-raster"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "gif",
  "image-webp",
@@ -1375,7 +1375,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-text"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hypher",
  "rustybuzz",
@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-tree"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1395,7 +1395,7 @@ dependencies = [
 
 [[package]]
 name = "turbopdf-wasm"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
