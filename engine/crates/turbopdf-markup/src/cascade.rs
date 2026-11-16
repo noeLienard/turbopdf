@@ -1,9 +1,12 @@
 //! The CSS cascade: stylesheets (`<style>`, local `<link>`, the `css` option) and inline `style` attributes
 //! → the declarations that apply to every element, in cascade order (last wins).
 //!
-//! Selectors: type, `*`, `.class`, `#id`, `[attr]`, `[attr=value]`, descendant and `>` combinators,
-//! `:first-child`, `:last-child`, `:nth-child(odd | even | N | An+B)`, `:root`, `::before` / `::after`,
-//! selector lists. Rules using anything else (`+`, `~`, `:hover`…) never match. At-rules: `@media` (print /
+//! Selectors: type, `*`, `.class`, `#id`, attributes (`[a]`, `=`, `~=`, `|=`, `^=`, `$=`, `*=`, and the `i`
+//! flag), the descendant, `>`, `+` and `~` combinators, `:first-child`, `:last-child`, `:only-child`,
+//! `:nth-child()`, `:nth-last-child()`, `:first-of-type`, `:last-of-type`, `:only-of-type`, `:nth-of-type()`,
+//! `:nth-last-of-type()`, `:empty`, `:root`, `:not()` / `:is()` / `:where()` (with compound selectors),
+//! `::before` / `::after`, selector lists. Interactive states (`:hover`, `:focus`…) never match on paper;
+//! anything else unsupported is reported (see [`Stylesheet::unsupported`]). At-rules: `@media` (print /
 //! all applied, screen-only skipped), `@page { size; margin }`, `@font-face`; the rest is ignored.
 //!
 //! Rules are filed under the id, first class or tag of their rightmost compound (browsers' rule hash), so
@@ -31,20 +34,64 @@ pub struct FontFaceRule {
     pub style: Option<String>,
 }
 
+/// `An+B` among the siblings, counted from the start or the end, all of them or those of the same type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Pseudo {
-    FirstChild,
-    LastChild,
-    Nth { a: i64, b: i64 },
-    Root,
+struct Nth {
+    a: i64,
+    b: i64,
+    from_end: bool,
+    of_type: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, PartialEq)]
+enum Pseudo {
+    Nth(Nth),
+    /// `:only-child` / `:only-of-type`
+    Only {
+        of_type: bool,
+    },
+    Empty,
+    Root,
+    /// `:not(a, b)`: none of them matches.
+    Not(Vec<Compound>),
+    /// `:is(a, b)` / `:where(a, b)`: one of them matches (`:where` adds no specificity).
+    Is {
+        list: Vec<Compound>,
+        counts: bool,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttrOp {
+    /// `=`
+    Equals,
+    /// `~=`: one of the space-separated words
+    Word,
+    /// `|=`: equal, or followed by `-`
+    Lang,
+    /// `^=`
+    Prefix,
+    /// `$=`
+    Suffix,
+    /// `*=`
+    Contains,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct AttrTest {
+    name: String,
+    /// `None`: `[name]`, the attribute is present.
+    value: Option<(AttrOp, String)>,
+    /// `[a="x" i]`
+    ignore_case: bool,
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
 struct Compound {
     tag: Option<String>,
     id: Option<String>,
     classes: Vec<String>,
-    attrs: Vec<(String, Option<String>)>,
+    attrs: Vec<AttrTest>,
     pseudo: Vec<Pseudo>,
 }
 
@@ -52,6 +99,10 @@ struct Compound {
 enum Combinator {
     Descendant,
     Child,
+    /// `+`
+    Adjacent,
+    /// `~`
+    Sibling,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -85,6 +136,25 @@ pub struct Stylesheet {
     pub font_faces: Vec<FontFaceRule>,
     /// key (`#id`, `.class`, `tag`, `*`) → (rule, selector) indices.
     index: HashMap<String, Vec<(usize, usize)>>,
+    /// What the stylesheets use that is not supported, in order of first use, each with its count:
+    /// `("selector", "p::first-line")`, `("property", "box-shadow")`.
+    pub unsupported: Vec<(Unsupported, usize)>,
+}
+
+/// A selector or property the converter does not support (it is ignored).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Unsupported {
+    Selector(String),
+    Property(String),
+}
+
+impl Stylesheet {
+    pub(crate) fn report(list: &mut Vec<(Unsupported, usize)>, what: Unsupported) {
+        match list.iter_mut().find(|(w, _)| *w == what) {
+            Some((_, n)) => *n += 1,
+            None => list.push((what, 1)),
+        }
+    }
 }
 
 /// A stylesheet's text, and the folder its relative `url(…)`s are relative to (`""`: the document's).
@@ -148,14 +218,28 @@ impl Stylesheet {
                 }
                 continue;
             }
-            let selectors: Vec<Selector> = split_top(prelude, ',')
-                .into_iter()
-                .filter_map(selector)
-                .collect();
+            let mut selectors: Vec<Selector> = Vec::new();
+            for src in split_top(prelude, ',') {
+                match selector(src) {
+                    Some(sel) => selectors.push(sel),
+                    // `:hover` and co. never match on paper: not worth a warning
+                    None if !is_interactive(src) => Self::report(
+                        &mut self.unsupported,
+                        Unsupported::Selector(src.trim().to_string()),
+                    ),
+                    None => {}
+                }
+            }
             if !selectors.is_empty() {
+                let declarations = declarations(body);
+                for (k, _, _) in &declarations {
+                    if crate::style::support(k) == crate::style::Support::No {
+                        Self::report(&mut self.unsupported, Unsupported::Property(k.clone()));
+                    }
+                }
                 self.rules.push(Rule {
                     selectors,
-                    declarations: declarations(body),
+                    declarations,
                 });
             }
         }
@@ -453,7 +537,13 @@ fn apply(
     vars: &HashMap<String, String>,
     out: &mut Computed,
 ) {
-    path.push(Ctx { id, index, count });
+    let parent = path.last().map(|c| c.id);
+    path.push(Ctx {
+        id,
+        index,
+        count,
+        parent,
+    });
     let (own, own_vars, before, after) = {
         let e = dom.element(id).expect("an element");
         // candidate selectors: filed under `*`, the tag, the classes or the id of the element
@@ -566,4 +656,107 @@ fn set(out: &mut Computed, id: Id, decls: Vec<Decl>) {
         out.decls.resize_with(id + 1, Vec::new);
     }
     out.decls[id] = decls;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The `color` each element with an `id` gets from `css`.
+    fn colors(html: &str, css: &str) -> HashMap<String, String> {
+        let mut dom = Dom::parse(html);
+        let sheet = Stylesheet::parse(&[StyleSource { css, base: "" }]);
+        let root = dom.skeleton().html;
+        let computed = cascade(&mut dom, &sheet, &[root]);
+        let mut out = HashMap::new();
+        for id in 0..dom.nodes.len() {
+            if let Some(e) = dom.element(id)
+                && let Some(name) = e.attr("id")
+                && let Some(c) = computed.prop(id, &["color"])
+            {
+                out.insert(name.to_string(), c);
+            }
+        }
+        out
+    }
+
+    const LIST: &str = r#"<ul><li id="a">a</li><li id="b" class="x">b</li><li id="c" data-k="pre-v">c</li><li id="d"></li></ul>"#;
+
+    #[test]
+    fn sibling_combinators() {
+        let c = colors(LIST, "#a + li { color: red } .x ~ li { color: blue }");
+        assert_eq!(c.get("b").map(String::as_str), Some("red"));
+        assert_eq!(c.get("c").map(String::as_str), Some("blue"));
+        assert_eq!(c.get("d").map(String::as_str), Some("blue"));
+        assert!(!c.contains_key("a"));
+    }
+
+    #[test]
+    fn structural_pseudo_classes() {
+        let html =
+            r#"<div><p id="p1">1</p><span id="s1">s</span><p id="p2">2</p><p id="p3"></p></div>"#;
+        let c = colors(
+            html,
+            "p:first-of-type { color: red } p:last-of-type { color: blue } span:only-of-type { color: green } p:nth-last-child(3) { color: navy } p:empty { color: gray }",
+        );
+        assert_eq!(c.get("p1").map(String::as_str), Some("red"));
+        assert_eq!(c.get("s1").map(String::as_str), Some("green"));
+        // p3 is both last-of-type and empty: `:empty` comes later with the same specificity
+        assert_eq!(c.get("p3").map(String::as_str), Some("gray"));
+        assert!(!c.contains_key("p2"));
+        let c = colors(html, "p:nth-of-type(2) { color: red }");
+        assert_eq!(c.get("p2").map(String::as_str), Some("red"));
+    }
+
+    #[test]
+    fn not_is_where_and_attribute_operators() {
+        let c = colors(
+            LIST,
+            "li:not(.x, #d) { color: red } li:is(#d) { color: blue }",
+        );
+        assert_eq!(c.get("a").map(String::as_str), Some("red"));
+        assert_eq!(c.get("c").map(String::as_str), Some("red"));
+        assert!(!c.contains_key("b"));
+        assert_eq!(c.get("d").map(String::as_str), Some("blue"));
+        // `:not(.x, #d)` is as specific as its most specific argument (an id), as in browsers
+        let c = colors(
+            LIST,
+            "li:not(.x, #d) { color: red } [data-k^=pre] { color: green }",
+        );
+        assert_eq!(c.get("c").map(String::as_str), Some("red"));
+        let c = colors(LIST, "[data-k^=pre] { color: green }");
+        assert_eq!(c.get("c").map(String::as_str), Some("green"));
+        let c = colors(
+            LIST,
+            r#"[data-k$="-v"] { color: red } [data-k*="E-V" i] { color: blue }"#,
+        );
+        assert_eq!(c.get("c").map(String::as_str), Some("blue"));
+        // `:where()` adds no specificity: the later plain rule wins
+        let c = colors(LIST, "li:where(.x) { color: red } li { color: blue }");
+        assert_eq!(c.get("b").map(String::as_str), Some("blue"));
+    }
+
+    #[test]
+    fn unsupported_selectors_and_properties_are_listed_but_not_hover() {
+        let sheet = Stylesheet::parse(&[StyleSource {
+            css: "a:hover { color: red } p::first-line { color: red } p { box-shadow: 0 0 1px red; cursor: pointer; color: red } div { box-shadow: none; -webkit-font-smoothing: auto }",
+            base: "",
+        }]);
+        assert_eq!(
+            sheet.unsupported,
+            vec![
+                (Unsupported::Selector("p::first-line".into()), 1),
+                (Unsupported::Property("box-shadow".into()), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_built_in_stylesheet_is_fully_supported() {
+        let sheet = Stylesheet::parse(&[StyleSource {
+            css: crate::UA_CSS,
+            base: "",
+        }]);
+        assert_eq!(sheet.unsupported, vec![]);
+    }
 }

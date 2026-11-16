@@ -88,7 +88,7 @@ export type CreateOptions = BaseOptions &
   );
 
 export interface Warning {
-  type: 'overflow' | 'moved_to_next_page' | 'missing_glyph' | 'image_failed' | 'stylesheet_failed' | 'font_failed' | 'broken_link' | 'missing_alt';
+  type: 'overflow' | 'moved_to_next_page' | 'missing_glyph' | 'image_failed' | 'stylesheet_failed' | 'font_failed' | 'broken_link' | 'missing_alt' | 'unsupported_css';
   /** English message explaining what happened and what to do. */
   message: string;
   /** The node's `id`, or its JSON Pointer in the document tree. */

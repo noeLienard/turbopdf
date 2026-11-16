@@ -102,7 +102,7 @@ Markdown extras: `<!-- pagebreak -->` and `<!-- toc -->`.
 ## Warnings (`pdf.warnings[].type`)
 
 `overflow`, `moved_to_next_page`, `missing_glyph`, `image_failed`, `stylesheet_failed`, `font_failed`, `broken_link`,
-`missing_alt`. Each `message` says how to fix the problem. Feed the messages back to the model and render again.
+`missing_alt`, `unsupported_css` (a CSS property or selector that was ignored). Each `message` says how to fix the problem. Feed the messages back to the model and render again.
 
 ## Errors (`TurboPdfError.code`)
 

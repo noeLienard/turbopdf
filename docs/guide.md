@@ -165,10 +165,13 @@ says what to do instead.
 HTML is converted to the document tree, with CSS from `<style>` elements, local `<link rel="stylesheet">` files,
 the `css` option and `style` attributes, cascaded by specificity (`!important` included).
 
-- **Selectors**: type, `*`, `.class`, `#id`, `[attr]`, `[attr=value]`, descendant, `>`, `:first-child`,
-  `:last-child`, `:nth-child()`, `:root`, `::before` and `::after` (`content`, including `attr()`). CSS custom
-  properties inherit and support nested `var()` references and fallbacks. `@media print` / `all` rules apply,
-  `screen` rules do not.
+- **Selectors**: type, `*`, `.class`, `#id`, attributes (`[attr]`, `=`, `~=`, `|=`, `^=`, `$=`, `*=`, and the
+  `i` flag), the descendant, `>`, `+` and `~` combinators, `:first-child`, `:last-child`, `:only-child`,
+  `:nth-child()`, `:nth-last-child()`, `:first-of-type`, `:last-of-type`, `:only-of-type`, `:nth-of-type()`,
+  `:nth-last-of-type()`, `:empty`, `:root`, `:not()`, `:is()` and `:where()` (with compound selectors),
+  `::before` and `::after` (`content`, including `attr()`). Screen states (`:hover`, `:focus`…) never match on
+  paper. CSS custom properties inherit and support nested `var()` references and fallbacks. `@media print` /
+  `all` rules apply, `screen` rules do not.
 - **Properties**: `display` (`block`, `flex`, `grid`, `none`), Flexbox, CSS Grid auto-placement with fixed,
   percentage and `fr` tracks (`repeat()` included), `width` / `height` and their
   min/max, `margin`, `padding`, `border` and each side (`border-top`…, `border-width` / `-style` / `-color`
@@ -186,7 +189,8 @@ the `css` option and `style` attributes, cascaded by specificity (`!important` i
 - **Fonts**: `@font-face { font-family: Brand; src: url(fonts/brand.ttf) }` with local `.ttf` / `.otf` files,
   read inside `baseDir` (relative to the stylesheet that declares them).
 
-Not supported: JavaScript, web fonts downloaded from a URL and WOFF / WOFF2 files (a
+Every property or selector that is not supported gives an `unsupported_css` warning, so you know why the PDF
+differs from a browser. Not supported: JavaScript, web fonts downloaded from a URL and WOFF / WOFF2 files (a
 `font_failed` warning says what to do), remote images and stylesheets (each one gives a warning).
 
 ### Markdown
@@ -377,6 +381,7 @@ for (const w of pdf.warnings) console.warn(w.type, w.message);
 | `image_failed` | An image could not be loaded (missing file, corrupt data, remote URL) |
 | `stylesheet_failed` | A `<link>` stylesheet was not applied (remote, missing, or outside `baseDir`) |
 | `font_failed` | An `@font-face` font was not loaded (remote, WOFF, missing, or outside `baseDir`) |
+| `unsupported_css` | A CSS property or selector the converter does not support was ignored (one warning each, with how often it is used). Screen-only properties (`cursor`, `transition`…) are ignored silently |
 | `broken_link` | A link to `#id` points to no element |
 | `missing_alt` | `pdfua`: an image has no `alt`, it was marked decorative |
 
