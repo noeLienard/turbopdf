@@ -56,17 +56,65 @@ function native(m: NativeEngine): NativeEngine {
   };
 }
 
+/** Set per output format by tsup (`define`): the CommonJS build has a real `require`. */
+declare const __TURBOPDF_CJS__: boolean;
+
+// ESM: a `require` made by `createRequire` at module level, which file tracers (@vercel/nft) recognise.
+const esmRequire = createRequire(import.meta.url);
+
+/**
+ * The prebuilt package for `target`. Each name is a literal `require`: bundlers and file tracers (Vercel,
+ * Netlify, Next.js standalone) only copy the packages they can see required, never a computed name.
+ * Guarded by test/tracing.test.ts.
+ */
+function prebuilt(target: string): NativeEngine {
+  if (__TURBOPDF_CJS__) {
+    switch (target) {
+      case 'darwin-arm64':
+        return require('@turbopdf/engine-darwin-arm64') as NativeEngine;
+      case 'darwin-x64':
+        return require('@turbopdf/engine-darwin-x64') as NativeEngine;
+      case 'linux-x64-gnu':
+        return require('@turbopdf/engine-linux-x64-gnu') as NativeEngine;
+      case 'linux-x64-musl':
+        return require('@turbopdf/engine-linux-x64-musl') as NativeEngine;
+      case 'linux-arm64-gnu':
+        return require('@turbopdf/engine-linux-arm64-gnu') as NativeEngine;
+      case 'win32-x64-msvc':
+        return require('@turbopdf/engine-win32-x64-msvc') as NativeEngine;
+      default:
+        throw new Error(`no prebuilt engine for ${target}`);
+    }
+  }
+  switch (target) {
+    case 'darwin-arm64':
+      return esmRequire('@turbopdf/engine-darwin-arm64') as NativeEngine;
+    case 'darwin-x64':
+      return esmRequire('@turbopdf/engine-darwin-x64') as NativeEngine;
+    case 'linux-x64-gnu':
+      return esmRequire('@turbopdf/engine-linux-x64-gnu') as NativeEngine;
+    case 'linux-x64-musl':
+      return esmRequire('@turbopdf/engine-linux-x64-musl') as NativeEngine;
+    case 'linux-arm64-gnu':
+      return esmRequire('@turbopdf/engine-linux-arm64-gnu') as NativeEngine;
+    case 'win32-x64-msvc':
+      return esmRequire('@turbopdf/engine-win32-x64-msvc') as NativeEngine;
+    default:
+      throw new Error(`no prebuilt engine for ${target}`);
+  }
+}
+
 /** The fastest engine available: a native binary for this platform, else the WebAssembly build. */
 export function loadNative(): NativeEngine {
   if (cached) return cached;
   const mode = process.env.TURBOPDF_ENGINE; // `native` | `wasm` | unset (native, then wasm)
   if (mode !== 'wasm') {
-    const require = createRequire(join(here, 'noop.js'));
+    const local = createRequire(join(here, 'noop.js'));
     for (const path of candidates()) {
-      if (existsSync(path)) return (cached = native(require(path) as NativeEngine));
+      if (existsSync(path)) return (cached = native(local(path) as NativeEngine));
     }
     try {
-      return (cached = native(require(`@turbopdf/engine-${platformTarget()}`) as NativeEngine));
+      return (cached = native(prebuilt(platformTarget())));
     } catch {
       // no native binary for this platform: fall back to WebAssembly below
     }

@@ -8,8 +8,11 @@ export default defineConfig([
     clean: true,
     shims: true, // import.meta.url / __dirname in both formats (native module lookup)
     target: 'node20',
-    external: ['react', 'react-dom', 'react-dom/server'],
+    external: ['react', 'react-dom', 'react-dom/server', /^@turbopdf\/engine-/],
     // `require('turbopdf')` returns the API itself (with .create / .default), not just { default }
+    esbuildOptions: (o, { format }) => {
+      o.define = { ...o.define, __TURBOPDF_CJS__: String(format === 'cjs') };
+    },
     footer: ({ format }) => (format === 'cjs' ? { js: 'if (module.exports.default) module.exports = Object.assign(module.exports.default, module.exports);' } : {}),
   },
   {
@@ -34,6 +37,9 @@ export default defineConfig([
     format: ['esm'],
     target: 'node18',
     banner: { js: '#!/usr/bin/env node' },
-    external: ['tsx', 'react', 'react-dom'],
+    esbuildOptions: (o) => {
+      o.define = { ...o.define, __TURBOPDF_CJS__: 'false' };
+    },
+    external: ['tsx', 'react', 'react-dom', /^@turbopdf\/engine-/],
   },
 ]);

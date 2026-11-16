@@ -2,7 +2,7 @@
 // TURBOPDF_ENGINE=wasm): same Rust code, same bytes out. Renders run in a worker thread (dist/wasm-worker.cjs),
 // so they never block the event loop; without the built worker (tests from source) they run on this thread.
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import nodeModule from 'node:module';
 import { join } from 'node:path';
 import type { Worker as WorkerType } from 'node:worker_threads';
 import type { NativeDocument, NativeEngine } from './engine-api';
@@ -25,7 +25,7 @@ export function wasmEngine(wasm: Uint8Array<ArrayBuffer>, here: string): NativeE
 
   // loaded at run time, not imported: bundlers (Turbopack, webpack) treat `new Worker(path)` from a static
   // import as a worker entry to bundle, and fail on a path only known at run time
-  const { Worker } = createRequire(script)('node:worker_threads') as typeof import('node:worker_threads');
+  const { Worker } = nodeModule.createRequire(script)('node:worker_threads') as typeof import('node:worker_threads');
   let worker: WorkerType | undefined;
   let next = 0;
   const pending = new Map<number, { resolve(v: unknown): void; reject(e: Error): void }>();

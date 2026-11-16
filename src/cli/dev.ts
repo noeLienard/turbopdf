@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, watch, writeFileSync, mkdtempSync } from 'node:fs';
 import { createServer, type ServerResponse } from 'node:http';
-import { createRequire } from 'node:module';
+import nodeModule from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -64,7 +64,7 @@ async function loadSource(file: string, tsconfig: () => string): Promise<CreateO
   if (exported === undefined) throw new TurboPdfError('invalid_source', `${basename(file)} has no default export. Use: export default function Invoice() { return <h1>…</h1>; }`);
 
   // resolve React from the user's project, not from turbopdf
-  const req = createRequire(pathToFileURL(file).href);
+  const req = nodeModule.createRequire(pathToFileURL(file).href);
   let element: unknown = exported;
   let renderToStaticMarkup: (el: unknown) => string;
   try {

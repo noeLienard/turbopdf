@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com), and the project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- Vercel, Netlify and Next.js `output: 'standalone'` deployments now include the native engine: each engine
+  package is loaded by a literal `require` that file tracers follow (before, they copied none, and the app
+  failed with `engine_unavailable` or fell back to WebAssembly). Checked by `npm run check:trace`.
+
 ## 0.2.0 — 2026-11-16
 
 ### Added

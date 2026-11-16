@@ -94,7 +94,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "check": "npm run typecheck && npm test && npm run build && npm run check:rust",
+    "check": "npm run typecheck && npm test && npm run build && npm run check:trace && npm run check:rust",
+    "check:trace": "node scripts/check-trace.mjs",
     "check:rust": "cargo fmt --manifest-path engine/Cargo.toml --all -- --check && cargo clippy --manifest-path engine/Cargo.toml --workspace --all-targets -- -D warnings && cargo test --manifest-path engine/Cargo.toml --workspace",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
