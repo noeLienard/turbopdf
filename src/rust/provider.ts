@@ -7,7 +7,15 @@ interface Host {
   engine(): NativeEngine;
   /** `baseDir` when the options give none: the working directory in Node, none (no files) on the edge. */
   baseDir(): string | undefined;
+  /**
+   * `renderToStaticMarkup` from `react-dom/server`, loaded on first use. Node imports it from the project;
+   * the edge entry never imports it (an unresolved import would stop a Worker from loading): it is passed
+   * to `init()` instead, or `undefined`.
+   */
+  react(): Promise<ReactRenderer | undefined>;
 }
+
+export type ReactRenderer = (element: unknown) => string;
 
 let host: Host | undefined;
 
@@ -22,3 +30,4 @@ function current(): Host {
 
 export const engine = (): NativeEngine => current().engine();
 export const defaultBaseDir = (): string | undefined => current().baseDir();
+export const reactRenderer = (): Promise<ReactRenderer | undefined> => current().react();
