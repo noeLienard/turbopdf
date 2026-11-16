@@ -4,7 +4,7 @@ import { toBase64, u32be } from './bytes';
 import { TurboPdfError } from './errors';
 import { withSlot } from './queue';
 import { isReactElement, renderPdf, type RenderResult } from './rust/engine';
-import type { CreateOptions, EdgePdf, EdgePngPage, EdgePreview, PngOptions, PreviewPage, ResponseOptions, Warning } from './types';
+import type { CreateOptions, EdgePdf, EdgePngPage, EdgePreview, PngOptions, PreviewOptions, PreviewPage, ResponseOptions, Warning } from './types';
 import type { HtmlFromEngine } from './preview-types';
 
 const SOURCES = ['html', 'react', 'markdown', 'tree'] as const;
@@ -80,14 +80,31 @@ export function pngPages(pngs: Uint8Array[]): EdgePngPage[] {
 
 const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
+/** Lets a page shrink with its container (`scaleToFit`): see {@link scalable}. */
+const FIT_STYLE = '.turbopdf-fit{container-type:inline-size;width:100%}.turbopdf-fit>.turbopdf-page{margin-left:auto;margin-right:auto}';
+
+/**
+ * `scaleToFit`: every length of the page is `Npt` in a `style` attribute; it becomes `calc(var(--u)*N)`, with
+ * `--u = min(1pt, container width / page width)`. The page then scales as a whole (same lines, same breaks,
+ * same proportions) when its container is narrower, and never grows past its real size. Pure CSS (container
+ * query units), so it also works when the page is inserted with `innerHTML` / `dangerouslySetInnerHTML`.
+ */
+function scalable(html: string, width: number): string {
+  const scaled = html.replace(/style="([^"]*)"/g, (_, css: string) => `style="${css.replace(/(-?(?:\d+\.?\d*|\.\d+))pt\b/g, 'calc(var(--u)*$1)')}"`);
+  const page = scaled.replace('<section class="turbopdf-page" style="', `<section class="turbopdf-page" style="--u:min(1pt,100cqw / ${width});`);
+  return `<div class="turbopdf-fit">${page}</div>`;
+}
+
 /** HTML preview from the engine → {@link EdgePreview}. */
-export function previewOf(p: HtmlFromEngine, meta: { title?: string; lang?: string }): EdgePreview {
-  const pages: PreviewPage[] = p.pages.map((x, i) => ({ page: i + 1, width: x.width, height: x.height, html: x.html }));
+export function previewOf(p: HtmlFromEngine, meta: { title?: string; lang?: string }, options: PreviewOptions = {}): EdgePreview {
+  const fit = options.scaleToFit === true;
+  const style = fit ? FIT_STYLE + p.style : p.style;
+  const pages: PreviewPage[] = p.pages.map((x, i) => ({ page: i + 1, width: x.width, height: x.height, html: fit ? scalable(x.html, x.width) : x.html }));
   const toHtml = () =>
     `<!DOCTYPE html><html${meta.lang ? ` lang="${escape(meta.lang)}"` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escape(meta.title ?? 'Preview')}</title>` +
-    `<style>body{margin:0;padding:24px 0;background:#e5e7eb}.turbopdf-page{margin:0 auto 24px;box-shadow:0 2px 12px rgba(0,0,0,.15)}${p.style}</style></head><body>${pages.map((x) => x.html).join('')}</body></html>`;
+    `<style>body{margin:0;padding:24px ${fit ? '12px' : '0'};background:#e5e7eb}.turbopdf-page{margin:0 auto 24px;box-shadow:0 2px 12px rgba(0,0,0,.15)}${style}</style></head><body>${pages.map((x) => x.html).join('')}</body></html>`;
   return {
-    style: p.style,
+    style,
     pages,
     toHtml,
     toResponse: (init) => new Response(toHtml(), { ...init, headers: { 'Content-Type': 'text/html; charset=utf-8', ...init?.headers } }),
@@ -106,7 +123,7 @@ export class EdgePdfImpl<Png extends EdgePngPage = EdgePngPage, Html extends Edg
   private readonly png: (p: EdgePngPage) => Png;
   private readonly html: (p: EdgePreview) => Html;
   private pngs = new Map<number, Promise<Png[]>>();
-  private htmlPreview?: Promise<Html>;
+  private htmlPreview = new Map<boolean, Promise<Html>>();
 
   constructor(r: RenderResult, png?: (p: EdgePngPage) => Png, html?: (p: EdgePreview) => Html) {
     this.r = r;
@@ -135,13 +152,15 @@ export class EdgePdfImpl<Png extends EdgePngPage = EdgePngPage, Html extends Edg
     });
   }
 
-  preview(): Promise<Html> {
-    if (!this.htmlPreview) {
-      const p = this.r.html().then((h) => this.html(previewOf(h, this.r.meta)));
-      this.htmlPreview = p;
-      p.catch(() => (this.htmlPreview = undefined));
+  preview(options: PreviewOptions = {}): Promise<Html> {
+    const fit = options.scaleToFit === true;
+    let cached = this.htmlPreview.get(fit);
+    if (!cached) {
+      cached = this.r.html().then((h) => this.html(previewOf(h, this.r.meta, { scaleToFit: fit })));
+      this.htmlPreview.set(fit, cached);
+      cached.catch(() => this.htmlPreview.delete(fit));
     }
-    return this.htmlPreview;
+    return cached;
   }
 
   toPng(options: PngOptions = {}): Promise<Png[]> {
