@@ -22,5 +22,8 @@ jobs:
         run: rustup component add clippy rustfmt
       - run: npm ci
       - run: npm run build:native
+      - run: npm run build:wasm
       - run: npm run check
+      - name: Tests on the WebAssembly engine (the fallback where no native binary exists)
+        run: npm run test:wasm
       - run: npm pack --dry-run

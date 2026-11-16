@@ -1,6 +1,6 @@
 [package]
 name = "turbopdf-wasm"
-description = "WebAssembly build of the TurboPDF engine (plain C ABI, no wasm-bindgen)."
+description = "WebAssembly build of the TurboPDF engine (plain C ABI, no wasm-bindgen): the same API as the Node binding."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,4 +11,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 turbopdf-engine.workspace = true
+turbopdf-markup.workspace = true
+serde.workspace = true
 serde_json.workspace = true

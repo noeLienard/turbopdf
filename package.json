@@ -53,6 +53,8 @@
   "files": [
     "dist",
     "native",
+    "wasm/engine.cjs",
+    "wasm/turbopdf.wasm",
     "README.md",
     "llms.txt",
     "LICENSE",
@@ -89,6 +91,8 @@
     "test:watch": "vitest",
     "gen:tree": "cargo test --manifest-path engine/Cargo.toml -p turbopdf-tree --features ts && cp engine/crates/turbopdf-tree/bindings/tree.ts src/tree.ts",
     "build:native": "node scripts/build-native.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "test:wasm": "node scripts/test-wasm.mjs",
     "bench": "tsx bench/run.ts"
   },
   "peerDependencies": {

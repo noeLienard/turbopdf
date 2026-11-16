@@ -27,11 +27,13 @@ cargo run --release -p turbopdf-engine --example bench  -- fixtures/invoice_200.
 cargo run --release -p turbopdf-engine --example phases -- fixtures/invoice_200.json    # per phase
 
 npm run build:native                      # (repo root) Node module → native/turbopdf.<platform>-<arch>.node
-cargo build --release -p turbopdf-wasm --target wasm32-unknown-unknown   # → target/wasm32-unknown-unknown/release/turbopdf_wasm.wasm
-node wasm/check-determinism.mjs           # native vs wasm: same PDF bytes for every fixture
+npm run build:wasm                        # (repo root) WebAssembly engine → wasm/turbopdf.wasm
+npm run test:wasm                         # (repo root) the whole SDK test suite on the WebAssembly engine
 ```
 
-WebAssembly usage (no dependency, no filesystem: use `{ "data": base64 }` sources):
+The SDK uses the WebAssembly build by itself wherever no native binary exists (`src/rust/wasm.ts` +
+`wasm/engine.cjs`, in a worker thread, files read inside `baseDir` like the native module). Standalone
+usage, in Node or a browser (no dependency, no filesystem: use `{ "data": base64 }` sources):
 
 ```js
 import { load } from './wasm/turbopdf.mjs';
@@ -39,7 +41,8 @@ const engine = await load(await fetch('/turbopdf_wasm.wasm'));
 const { pdf, pages, warnings, previews } = engine.render(tree, { previews: 2 });
 ```
 
-The `.wasm` is 7.6 MB (Inter ×5 and the hyphenation dictionaries are embedded); ~24 ms for the 200-row invoice.
+The `.wasm` is 10.8 MB (Inter ×5, the hyphenation dictionaries and the HTML parser are embedded); 1.3–2× the
+native time for a PDF (17 ms instead of 12 ms for the 200-row invoice), ~2.7× for PNGs.
 
 ## Performance
 
@@ -64,10 +67,7 @@ graphics block per cell, and deflate through `zlib-rs`.
 The same tree gives the same PDF bytes (tested: `same_tree_gives_the_same_bytes`). No clock (the creation
 date is written only when `meta.creationDate` is set), no randomness, no system fonts.
 PNG previews are pixel-identical on one machine but may differ by antialiasing across CPUs.
-Checked: macOS arm64 (native) and wasm32 give byte-identical PDFs for every fixture (`wasm/check-determinism.mjs`).
-Linux (x86_64 SIMD paths of the deflate) is not checked yet: run the same fixtures in a Linux container or CI:
-
-```bash
-docker run --rm --platform linux/amd64 -v "$PWD":/src:ro -w /src -e CARGO_TARGET_DIR=/tmp/t rust:1.92 \
-  sh -c 'cargo build -q --release -p turbopdf-engine --example render && for f in hello invoice invoice_200; do /tmp/t/release/examples/render fixtures/$f.json /tmp/o 1 >/dev/null && md5sum /tmp/o/$f.pdf; done'
-```
+Checked: native and wasm32 give byte-identical PDFs, PNGs and HTML previews for every fixture
+(`test/wasm.test.ts`, run in CI on Linux x86_64 and locally on macOS arm64).
+WebAssembly gives the same bytes on every host, so this also ties the native builds together: macOS arm64 =
+wasm32 = Linux x86_64. The release workflow runs the same suite on each platform it ships.
