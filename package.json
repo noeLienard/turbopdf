@@ -1,6 +1,6 @@
 {
   "name": "turbopdf",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "HTML, React or Markdown to PDF in milliseconds. Native Rust engine: no browser, no network, byte-identical output, PDF/UA.",
   "license": "MIT",
   "repository": {
