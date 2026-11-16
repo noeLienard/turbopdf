@@ -39,6 +39,13 @@ interface BaseOptions {
   margin?: Margin;
   /** Extra CSS for `html` and `react` sources, applied after the document's own stylesheets. */
   css?: string;
+  /**
+   * Origins (or URL prefixes) that remote images may be downloaded from, e.g. `['https://cdn.example.com']`.
+   * TurboPDF downloads them before rendering (the engine never uses the network): https or http only,
+   * redirects checked against the list, images only, 20 MB and 10 s per image. Other remote URLs are
+   * skipped with an `image_failed` warning. Default: none, nothing is downloaded.
+   */
+  allowRemote?: string[];
   /** Max duration in ms for the whole render. Default: 30000 */
   timeout?: number;
 
@@ -95,7 +102,7 @@ export interface Warning {
   path?: string;
   /** 1-based page number. */
   page?: number;
-  /** `stylesheet_failed` / `font_failed`: the URL that was not used. */
+  /** `stylesheet_failed` / `font_failed` / downloaded `image_failed`: the URL that was not used. */
   url?: string;
 }
 

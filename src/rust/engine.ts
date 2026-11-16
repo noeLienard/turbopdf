@@ -9,6 +9,7 @@ import { markdownToNodes } from './markdown';
 import { toBase64 } from '../bytes';
 import { nativeError, type NativeDocument } from './engine-api';
 import { defaultBaseDir, engine, reactRenderer } from './provider';
+import { fetchRemoteImages } from './remote';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
@@ -300,7 +301,10 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
     const native = engine();
     const sdkWarnings: Warning[] = [];
     const buffers: Uint8Array[] = [];
-    const doc = await toTree(o, sdkWarnings, buffers);
+    let doc = await toTree(o, sdkWarnings, buffers);
+    // a tree given by the caller is theirs: download into a copy
+    if (o.tree !== undefined && o.allowRemote?.length) doc = structuredClone(doc);
+    const downloaded = await fetchRemoteImages(doc, o.allowRemote, sdkWarnings, buffers, o.signal);
     let rendered: NativeDocument;
     try {
       rendered = await native.render(JSON.stringify(doc), { baseDir: o.baseDir ?? defaultBaseDir(), buffers });
@@ -311,7 +315,13 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
     return {
       pdf: rendered.takePdf(),
       pages: rendered.pages,
-      warnings: [...sdkWarnings, ...(JSON.parse(rendered.warnings) as TreeWarning[]).map(toWarning)],
+      warnings: [
+        ...sdkWarnings,
+        ...(JSON.parse(rendered.warnings) as TreeWarning[])
+          // an image that failed to download already has its warning, with the real reason
+          .filter((w) => !(w.type === 'image_failed' && [...downloaded].some((u) => w.reason.startsWith(`${u} is remote`))))
+          .map(toWarning),
+      ],
       // drawn from the layout above: the document is not parsed or laid out again
       png: (scale) => rendered.png(scale).catch(fail),
       html: () =>

@@ -10,7 +10,7 @@ This file is for AI coding assistants. It is the whole API in one page. Full gui
 - `turbopdf.create(string)` treats the string as **HTML**. Markdown always goes through `{ markdown }`.
 - Pass exactly one source: `html`, `react`, `markdown` or `tree`.
 - Nothing is fetched over the network. Remote images, stylesheets and fonts are skipped with a warning.
-  Download them yourself, or pass `data:` URLs or local paths.
+  Download them yourself, pass `data:` URLs or local paths, or allow image origins: `allowRemote: ['https://cdn.example.com']`.
 - Relative paths are read from `baseDir` (default: the working directory) and never outside it.
 - JavaScript in the HTML never runs. Render data into the markup first, or use React.
 - Component and tree sizes are in points (1/72 in). CSS lengths are CSS (`px`, `mm`, `em`…).
@@ -34,7 +34,7 @@ Options (every source): `format` ('A3' | 'A4' | 'A5' | 'Letter' | 'Legal', defau
 ('portrait' | 'landscape'), `width`/`height` (custom size), `margin` ('10mm' default; a CSS length, a number of CSS pixels, or { top, right, bottom, left }),
 `css`, `header`/`footer` (HTML, `{page}` and `{pages}` are replaced), `fonts` ([{ family, path | data, weight?, style? }]),
 `watermark` ('PAID' or { text, color, fontSize, fontWeight, angle }), `title`, `lang`, `bookmarks` (true),
-`tagged` (true), `pdfua` (false; needs title and lang), `timeout` (30000 ms), `strict` (false), `signal`, `baseDir`.
+`tagged` (true), `pdfua` (false; needs title and lang), `allowRemote` (image origins to download from), `timeout` (30000 ms), `strict` (false), `signal`, `baseDir`.
 
 ## Output
 

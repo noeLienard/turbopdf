@@ -140,7 +140,7 @@ impl ResourceLoader for HostLoader {
         }
         if path.contains("://") && !path.starts_with("file://") {
             return Err(format!(
-                "{path} is remote: TurboPDF never uses the network. Download it and pass a file path or a data: URL"
+                "{path} is remote: TurboPDF never uses the network. Allow its origin with `allowRemote` (images), download it, or pass a data: URL"
             ));
         }
         read_host(path.trim_start_matches("file://"))
