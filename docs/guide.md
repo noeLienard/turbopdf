@@ -44,7 +44,7 @@ Every source becomes a **document tree** (pages, views, text, images, tables), l
 - `tree`: the document tree itself (types in `turbopdf/tree`).
 
 Nothing is fetched over the network. Images, fonts and stylesheets are read from `baseDir` (default: the working
-directory) and never outside it. The same input gives byte-identical PDFs on macOS, Linux and in WebAssembly.
+directory) and never outside it. Remote images can be allowed per origin with `allowRemote` (below). The same input gives byte-identical PDFs on macOS, Linux and in WebAssembly.
 
 ### Components (`turbopdf/components`)
 
@@ -151,6 +151,7 @@ To render a web page, fetch its HTML yourself and pass `{ html, baseDir }`: Turb
 | `title`, `lang` | from the source | Document title and language (`<title>`, `<html lang>`, `<Document>`; Markdown: the first `# heading`) |
 | `tagged` | `true` | Tagged PDF for screen readers. See [Accessibility](#accessibility). |
 | `pdfua` | `false` | Conform to PDF/UA-1. See [Accessibility](#accessibility). |
+| `allowRemote` | – | Origins or URL prefixes that remote images may be downloaded from, e.g. `['https://cdn.example.com']` |
 | `timeout` | `30000` | Max duration in ms |
 | `strict` | `false` | Throw on warnings instead of returning them |
 | `signal` | – | An `AbortSignal` to cancel |
@@ -159,6 +160,18 @@ Without `format` / `margin`, a CSS `@page { size: A5 landscape; margin: 1cm }` r
 Options of the browser-based versions (`url`, `engine`, `printBackground`, `media`, `javascript`, `headers`,
 `cookies`, `allowHosts`, `allowFileUrls`, `blockPrivateNetwork`, `deterministic`) are refused with an error that
 says what to do instead.
+
+#### Remote images (`allowRemote`)
+
+```ts
+await turbopdf.create({ html, allowRemote: ['https://cdn.example.com', 'https://images.example.com/products/'] });
+```
+
+The SDK downloads those images before rendering; the engine itself still never uses the network. An image is
+downloaded only when its origin (scheme, host and port) is listed and its path starts with the listed path.
+Redirects are followed (3 at most) only inside the list, URLs with credentials are refused, the answer must be an
+image (`Content-Type: image/*`) of at most 20 MB, received within 10 s. Any other remote URL, and every failed
+download, gives an `image_failed` warning with the reason. Stylesheets and fonts are never downloaded.
 
 ### HTML and CSS
 
@@ -462,7 +475,8 @@ Edge, but not the Cloudflare free plan (3 MB) or Vercel Edge Functions; on Verce
 ## Security
 
 TurboPDF is safe for HTML from users by design: scripts never run, nothing is fetched over the network, and files
-are only read inside `baseDir`. Set `timeout` to bound the work a large document can cause.
+are only read inside `baseDir`. `allowRemote` opens the network for images from the listed origins only: list your
+own CDN, never a pattern that matches internal hosts. Set `timeout` to bound the work a large document can cause.
 
 ## Errors
 

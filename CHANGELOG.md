@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows [Kee
   PDF, the PNGs and the HTML preview. The tree gets the matching `textDecoration`, `letterSpacing`,
   `verticalAlign`, `fontVariantNumeric` and `textIndent` fields.
 
+- `allowRemote`: origins or URL prefixes that remote images may be downloaded from. The SDK downloads them
+  (redirects checked against the list, images only, 20 MB and 10 s each); the engine still never uses the network.
 - WOFF and WOFF2 fonts (`fonts` option and `@font-face`), e.g. the files of `@fontsource/*` packages.
 
 ### Changed

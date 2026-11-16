@@ -18,9 +18,9 @@ const REMOVED: Record<string, string> = {
   javascript: 'Scripts are never run; remove the option.',
   headers: 'Nothing is fetched over the network; remove the option.',
   cookies: 'Nothing is fetched over the network; remove the option.',
-  allowHosts: 'Nothing is fetched over the network; remove the option.',
+  allowHosts: 'Nothing is fetched over the network, except images from the origins listed in `allowRemote`: use `allowRemote: [\'https://cdn.example.com\']`.',
   allowFileUrls: 'Local files are read from `baseDir`; remove the option.',
-  blockPrivateNetwork: 'Nothing is fetched over the network; remove the option.',
+  blockPrivateNetwork: 'Nothing is fetched over the network unless `allowRemote` lists the origin; remove the option.',
   deterministic: 'The output is always deterministic (same input, same bytes); remove the option.',
 };
 
