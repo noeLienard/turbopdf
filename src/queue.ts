@@ -76,9 +76,21 @@ export async function withSlot<T>(signal: AbortSignal | undefined, work: () => P
   }
 }
 
-/** Load the engine now (module + embedded fonts) so the first PDF does not pay for it. */
-export async function warmup(): Promise<void> {
-  await engine().render(JSON.stringify({ type: 'document', version: 1, children: [{ type: 'page', children: [{ type: 'text', content: 'a' }] }] }));
+let warm: Promise<void> | undefined;
+
+/**
+ * Load the engine now (native module, or WebAssembly compiled and its worker started; embedded fonts parsed)
+ * so the first PDF does not pay for it. Call it at module scope of a serverless function: it runs once,
+ * later calls return the same promise.
+ */
+export function warmup(): Promise<void> {
+  warm ??= (async () => {
+    await engine().render(JSON.stringify({ type: 'document', version: 1, children: [{ type: 'page', children: [{ type: 'text', content: 'a' }] }] }));
+  })().catch((e: unknown) => {
+    warm = undefined; // let a later call try again
+    throw e;
+  });
+  return warm;
 }
 
 /** Nothing to close: there is no browser. Kept so code written for earlier versions keeps working. */

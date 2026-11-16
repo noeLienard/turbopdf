@@ -13,7 +13,7 @@ const both = existsSync(nativeFile) && existsSync(wasmFile);
 
 describe.skipIf(!both)('wasm engine', () => {
   const native = (both ? createRequire(__filename)(nativeFile) : undefined) as NativeEngine;
-  const wasm = (both ? wasmEngine(readFileSync(wasmFile), join(root, 'src', 'rust')) : undefined) as NativeEngine;
+  const wasm = (both ? wasmEngine(readFileSync(wasmFile), [join(root, 'dist', 'wasm-worker.cjs')].find((f) => existsSync(f))) : undefined) as NativeEngine;
 
   it('converts HTML exactly like the native engine', async () => {
     const html = readFileSync(join(root, 'examples/showcase/report.html'), 'utf8');

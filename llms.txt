@@ -17,6 +17,7 @@ This file is for AI coding assistants. It is the whole API in one page. Full gui
 - Built in: Inter, plus a symbols fallback (☐ ☑ ✔ ✘ ➜ ✉ ♠…). No color emoji.
 - Fonts: local TTF, OTF, WOFF or WOFF2 files (e.g. from `@fontsource/*`); web fonts are never loaded from a URL. `float` works for simple cases (columns, a logo or image with text beside it); prefer Flexbox or Grid for layouts.
 - Edge runtimes / browsers: `import { init, create } from 'turbopdf/edge'`, `await init(wasm)` once (wasm = `turbopdf/turbopdf.wasm`, its bytes or a URL), then `create()` (React: `init(wasm, { renderToStaticMarkup })` from `react-dom/server`); output with `toUint8Array()` / `toResponse()` (no `save`, no files: fonts as bytes, images as data: URLs).
+- Serverless (Vercel, Lambda, Next.js): nothing to configure; `serverExternalPackages: ['turbopdf']` in Next.js, `void turbopdf.warmup()` at module scope, `turbopdf.engineInfo()` tells native or wasm (and `fallbackReason`).
 - Problems are **returned** in `pdf.warnings`, not thrown. Check them, or pass `strict: true` to throw.
 
 ## Create

@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com), and the project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- The Linux glibc engines need glibc 2.17 instead of 2.35 (built with zig against glibc 2.17): they load on
+  Amazon Linux 2023, so on AWS Lambda and Vercel, which ran the 5× slower WebAssembly engine instead. The
+  release fails if a Linux engine needs a newer glibc (`scripts/check-glibc.mjs`) and renders a PDF with the
+  native engine in `amazonlinux:2023`, `public.ecr.aws/lambda/nodejs:22` and `node:22-bullseye`.
+- The WebAssembly engine and its worker are found by file tracers too: Vercel, Netlify and Next.js
+  `output: 'standalone'` deploy them with no `outputFileTracingIncludes`. Checked by `npm run check:trace`, and
+  by the release with a Next.js standalone app serving a PDF from Amazon Linux 2023.
+- A native engine that fails to load is no longer silent: one `[turbopdf]` warning gives the loader's message
+  (hide it with `TURBOPDF_NO_FALLBACK_WARNING=1`), and with `TURBOPDF_ENGINE=native` the `engine_unavailable`
+  error has it as its `cause`. `TURBOPDF_NATIVE`, when set, is the only native engine tried.
+
+### Added
+
+- `turbopdf.engineInfo()`: `{ kind: 'native' | 'wasm', target, version, fallbackReason? }`.
+- `warmup()` runs once: later calls return the same promise, so it can be called at module scope.
+- `bench/cold.mjs`: cold start (new process → first PDF) and warm render, native and WebAssembly.
+
+### Changed
+
+- The embedded fonts are parsed once per process instead of once per render: a warm native render goes from
+  2.1 ms to 1.6 ms (Apple M-series, `node bench/cold.mjs`). Cold start: 25 ms native, 125 ms WebAssembly,
+  unchanged; `wasm-opt -O3` and SIMD were measured and brought nothing, so the build is unchanged.
+
 ## 0.2.1 — 2026-11-16
 
 ### Fixed

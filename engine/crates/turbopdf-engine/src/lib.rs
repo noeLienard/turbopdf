@@ -61,6 +61,13 @@ pub struct Engine {
     base_fonts: FontDb,
 }
 
+/// The embedded fonts, parsed once per process: every engine (one per render when the host gives a loader)
+/// shares them, instead of copying and parsing ~2 MB of fonts each time.
+fn embedded_fonts() -> FontDb {
+    static FONTS: std::sync::OnceLock<FontDb> = std::sync::OnceLock::new();
+    FONTS.get_or_init(FontDb::with_embedded).clone()
+}
+
 impl Default for Engine {
     fn default() -> Self {
         Self::new()
@@ -72,7 +79,7 @@ impl Engine {
     pub fn new() -> Self {
         Self {
             loader: Arc::new(NoLoader),
-            base_fonts: FontDb::with_embedded(),
+            base_fonts: embedded_fonts(),
         }
     }
 
@@ -80,7 +87,7 @@ impl Engine {
     pub fn with_loader(loader: Arc<dyn ResourceLoader>) -> Self {
         Self {
             loader,
-            base_fonts: FontDb::with_embedded(),
+            base_fonts: embedded_fonts(),
         }
     }
 
