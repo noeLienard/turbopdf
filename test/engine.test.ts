@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import turbopdf, { engineInfo } from '../src/index';
 
@@ -15,7 +16,7 @@ writeFileSync(bad, 'not a shared library');
 /** Run `code` in a new process (the engine is chosen once per process), from the sources. */
 function child(code: string, env: Record<string, string>) {
   const script = join(scratch, `child-${Math.random().toString(36).slice(2)}.mts`);
-  writeFileSync(script, `import turbopdf, { engineInfo } from ${JSON.stringify(join(root, 'src/index.ts'))};\n${code}`);
+  writeFileSync(script, `import turbopdf, { engineInfo } from ${JSON.stringify(pathToFileURL(join(root, 'src/index.ts')).href)};\n${code}`);
   const r = spawnSync(process.execPath, ['--import', 'tsx', script], {
     cwd: root,
     env: { ...process.env, TURBOPDF_ENGINE: '', TURBOPDF_NO_FALLBACK_WARNING: '', ...env },
