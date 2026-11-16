@@ -301,3 +301,22 @@ describe('float', () => {
     expect(pdf.warnings).toEqual([]);
   });
 });
+
+describe('CSS: sibling combinators, :not() and unsupported CSS warnings', () => {
+  it('applies +, ~, :not() and :nth-of-type(), and reports what it ignores', async () => {
+    const pdf = await turbopdf.create({
+      html: '<ul><li class="a">a</li><li>b</li><li>c</li></ul>',
+      css: '.a + li { color: red } .a ~ li:not(:nth-of-type(2)) { color: blue } li { box-shadow: 0 1px 2px #000; cursor: pointer } li:hover { color: green } p::first-line { color: red }',
+    });
+    const css = pdf.warnings.filter((w) => w.type === 'unsupported_css').map((w) => w.message);
+    expect(css).toHaveLength(2);
+    expect(css.join(' ')).toContain('`p::first-line`');
+    expect(css.join(' ')).toContain('`box-shadow`');
+    expect(css.join(' ')).not.toMatch(/cursor|hover/);
+  });
+
+  it('reports properties of style attributes too', async () => {
+    const pdf = await turbopdf.create({ html: '<p style="text-shadow: 1px 1px red; color: red">x</p>' });
+    expect(pdf.warnings.map((w) => w.message).join(' ')).toContain('`text-shadow`');
+  });
+});

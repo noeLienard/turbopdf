@@ -8,8 +8,10 @@ use turbopdf_tree::{
 
 mod border;
 mod length;
+mod support;
 pub use length::css_length;
 use length::*;
+pub use support::{Support, support};
 
 /// One declaration: property (lowercase) and value (trimmed, without `!important`).
 pub type Decl = (String, String);

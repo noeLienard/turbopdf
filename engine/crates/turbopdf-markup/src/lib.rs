@@ -13,7 +13,7 @@ mod dom;
 mod images;
 pub mod style;
 
-use cascade::{FontFaceRule, StyleSource, Stylesheet, scheme};
+use cascade::{FontFaceRule, StyleSource, Stylesheet, Unsupported, scheme};
 use convert::Converter;
 use dom::{Dom, Id};
 use serde::Serialize;
@@ -205,6 +205,59 @@ fn page_setup(rule: &cascade::PageRule) -> PageSetup {
     setup
 }
 
+/// At most this many `unsupported_css` warnings, then one that sums up the rest.
+const MAX_CSS_WARNINGS: usize = 20;
+
+/// One `unsupported_css` warning per selector or property the converter ignores (stylesheets and `style`
+/// attributes), with how often it is used.
+fn unsupported_css(sheet: &Stylesheet, dom: &Dom, out: &mut Converted) {
+    let mut list = sheet.unsupported.clone();
+    for node in &dom.nodes {
+        if let dom::Data::Element(e) = &node.data
+            && let Some(style) = e.attr("style")
+        {
+            for (k, _, _) in style::declarations(style) {
+                if style::support(&k) == style::Support::No {
+                    Stylesheet::report(&mut list, Unsupported::Property(k));
+                }
+            }
+        }
+    }
+    let times = |n: usize| {
+        if n == 1 {
+            String::new()
+        } else {
+            format!(" ({n} times)")
+        }
+    };
+    for (what, n) in list.iter().take(MAX_CSS_WARNINGS) {
+        out.warnings.push(Warning {
+            kind: "unsupported_css",
+            url: String::new(),
+            message: match what {
+                Unsupported::Property(p) => format!(
+                    "CSS property `{p}` is not supported and was ignored{}. The PDF may differ from a browser here; see the supported CSS in the guide.",
+                    times(*n)
+                ),
+                Unsupported::Selector(sel) => format!(
+                    "CSS selector `{sel}` is not supported: its rule was ignored{}. Use classes, `>`, `+`, `~`, `:not()` or `:nth-child()` instead.",
+                    times(*n)
+                ),
+            },
+        });
+    }
+    if list.len() > MAX_CSS_WARNINGS {
+        out.warnings.push(Warning {
+            kind: "unsupported_css",
+            url: String::new(),
+            message: format!(
+                "{} more unsupported CSS selectors or properties were ignored.",
+                list.len() - MAX_CSS_WARNINGS
+            ),
+        });
+    }
+}
+
 const FONT_FORMATS: &[&str] = &["truetype", "opentype", "ttf", "otf"];
 
 fn is_font_file(url: &str) -> bool {
@@ -357,6 +410,7 @@ pub fn convert(input: &Input, loader: &dyn ResourceLoader) -> Result<Converted, 
     let sheet = Stylesheet::parse(&sources);
     out.page = page_setup(&sheet.page);
     font_faces(&sheet.font_faces, loader, &mut out);
+    unsupported_css(&sheet, &dom, &mut out);
 
     let skeleton = dom.skeleton();
     let computed = cascade::cascade(&mut dom, &sheet, &[skeleton.html]);

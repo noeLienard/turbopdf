@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com), and the project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- CSS selectors: `+` and `~` combinators, `:not()`, `:is()`, `:where()`, `:first-of-type`, `:last-of-type`,
+  `:only-child`, `:only-of-type`, `:nth-of-type()`, `:nth-last-child()`, `:nth-last-of-type()`, `:empty`, the
+  attribute operators `~=` `|=` `^=` `$=` `*=` and the `i` flag.
+- `unsupported_css` warning: each CSS property or selector that is ignored, with how often it is used.
+
 ## 0.1.0 — 2026-11-16
 
 TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
