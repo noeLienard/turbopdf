@@ -8,6 +8,7 @@ fn style(db: &FontDb, size: f32) -> TextStyle {
         color: [0, 0, 0, 255],
         line_height: 1.4,
         link: None,
+        effects: Effects::default(),
     }
 }
 fn span(db: &FontDb, text: &str, size: f32) -> Span {

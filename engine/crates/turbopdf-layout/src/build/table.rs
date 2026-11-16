@@ -170,6 +170,7 @@ pub(super) fn fast_text_cell(
     let prepared = text::prepare(cx.db, &mut cx.shapes, &sp);
     let mut opts = text::ParagraphOptions::new(content_w);
     opts.align = cinh.align;
+    opts.indent = cinh.indent;
     opts.lang = cx.lang.clone();
     opts.hyphenate = cx.hyphenate;
     let p = prepared

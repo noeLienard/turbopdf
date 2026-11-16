@@ -2,7 +2,7 @@
 
 use taffy::prelude::*;
 use turbopdf_fonts::FontDb;
-use turbopdf_text::{Align, Rgba, Span, TextStyle};
+use turbopdf_text::{Align, Decoration, Effects, Rgba, Span, TextStyle};
 use turbopdf_tree as t;
 
 /// Properties that cascade down the tree (like CSS inherited properties).
@@ -15,6 +15,12 @@ pub struct Inherited {
     pub color: Rgba,
     pub align: Align,
     pub line_height: f32,
+    pub decoration: Decoration,
+    pub letter_spacing: f32,
+    pub vertical: t::VerticalAlign,
+    pub tabular: bool,
+    /// First-line indent of paragraphs, in points.
+    pub indent: f32,
 }
 
 impl Default for Inherited {
@@ -27,8 +33,40 @@ impl Default for Inherited {
             color: [0x11, 0x11, 0x11, 255],
             align: Align::Left,
             line_height: 1.4,
+            decoration: Decoration::None,
+            letter_spacing: 0.0,
+            vertical: t::VerticalAlign::Baseline,
+            tabular: false,
+            indent: 0.0,
         }
     }
+}
+
+pub fn decoration_of(d: t::TextDecoration) -> Decoration {
+    match d {
+        t::TextDecoration::None => Decoration::None,
+        t::TextDecoration::Underline => Decoration::Underline,
+        t::TextDecoration::LineThrough => Decoration::LineThrough,
+        t::TextDecoration::Overline => Decoration::Overline,
+    }
+}
+
+/// The text fields shared by [`t::Style`] and [`t::TextStyle`], applied on top of `i`.
+macro_rules! apply_text_effects {
+    ($i:expr, $s:expr) => {
+        if let Some(v) = $s.text_decoration {
+            $i.decoration = decoration_of(v)
+        }
+        if let Some(v) = $s.letter_spacing {
+            $i.letter_spacing = v
+        }
+        if let Some(v) = $s.vertical_align {
+            $i.vertical = v
+        }
+        if let Some(v) = $s.font_variant_numeric {
+            $i.tabular = v == t::FontVariantNumeric::TabularNums
+        }
+    };
 }
 
 pub fn rgba(c: t::Color) -> Rgba {
@@ -69,6 +107,10 @@ pub fn inherit(parent: &Inherited, s: Option<&t::Style>) -> Inherited {
     if let Some(v) = s.line_height {
         i.line_height = v
     }
+    if let Some(v) = s.text_indent {
+        i.indent = v
+    }
+    apply_text_effects!(i, s);
     i
 }
 
@@ -89,6 +131,17 @@ pub fn spans(
             color: i.color,
             line_height: i.line_height,
             link,
+            effects: Effects {
+                decoration: i.decoration,
+                // raised or lowered by a share of the (already smaller) size of the text
+                rise: match i.vertical {
+                    t::VerticalAlign::Baseline => 0.0,
+                    t::VerticalAlign::Super => 0.45 * i.size,
+                    t::VerticalAlign::Sub => -0.25 * i.size,
+                },
+                letter_spacing: i.letter_spacing,
+                tabular: i.tabular,
+            },
         },
     };
     let mut link_id = |target: &str| -> u32 {
@@ -121,6 +174,16 @@ pub fn spans(
                     }
                     if let Some(v) = st.color {
                         i.color = rgba(v)
+                    }
+                    apply_text_effects!(i, st);
+                    // `super` / `sub` without a size of their own: smaller, as browsers draw `<sup>`
+                    if st.font_size.is_none()
+                        && matches!(
+                            st.vertical_align,
+                            Some(t::VerticalAlign::Super | t::VerticalAlign::Sub)
+                        )
+                    {
+                        i.size *= 0.75;
                     }
                 }
                 let link = sp.link.as_deref().map(&mut link_id);
@@ -183,7 +246,12 @@ pub fn merge(base: &t::Style, over: &t::Style) -> t::Style {
         font_style,
         color,
         text_align,
-        line_height
+        line_height,
+        text_decoration,
+        letter_spacing,
+        vertical_align,
+        font_variant_numeric,
+        text_indent
     );
     s.reset_sides_from(over);
     s

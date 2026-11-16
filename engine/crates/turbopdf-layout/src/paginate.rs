@@ -261,14 +261,19 @@ impl Paginator {
                 }));
             }
         }
+        let baseline = line_top + baseline - r.effects.rise;
+        let line = crate::decoration_box(x, baseline, &r);
         self.push_op(Op::Draw(
             DrawOp::Text {
                 x,
-                baseline: line_top + baseline,
+                baseline,
                 run: r,
             },
             tag,
         ));
+        if let Some(line) = line {
+            self.push(line); // drawn as a layout artifact
+        }
     }
 
     /// Where a node starts: its anchor, its bookmark, the clickable area of a linked box.

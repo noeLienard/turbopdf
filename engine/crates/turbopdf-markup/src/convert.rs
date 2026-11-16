@@ -17,7 +17,8 @@ use serde_json::{Map, Value, json};
 use std::collections::HashSet;
 use turbopdf_tree::{
     Cell, Color, Column, Dimension, EdgeSides, Edges, FlexDirection, FontStyle, Heading, Image,
-    Node, PageBreak, QrEcc, Role, Row, Span, Style, Table, TextAlign, TextContent, TextStyle, View,
+    Node, PageBreak, QrEcc, Role, Row, Span, Style, Table, TextAlign, TextContent, TextDecoration,
+    TextStyle, VerticalAlign, View,
 };
 
 mod float;
@@ -36,6 +37,9 @@ const INLINE: &[&str] = &[
     "s",
     "sub",
     "sup",
+    "ins",
+    "del",
+    "strike",
     "label",
     "br",
     "mark",
@@ -59,6 +63,41 @@ fn bottom(v: f32) -> Edges {
         bottom: Some(v),
         ..Default::default()
     })
+}
+
+/// `white-space` → the text as the engine should see it: it collapses runs of ordinary spaces and breaks
+/// lines at `\n`, so preserved spaces become non-breaking ones and newlines are dropped when collapsing.
+fn white_space(s: &str, mode: Option<&str>) -> String {
+    let nbsp = |t: String| t.replace(' ', "\u{a0}");
+    match mode {
+        Some("pre") => nbsp(keep_spaces(&s.replace('\t', "    "))),
+        Some("pre-wrap" | "break-spaces") => keep_spaces(&s.replace('\t', "    ")),
+        Some("pre-line") => s.split('\n').map(collapse).collect::<Vec<_>>().join("\n"),
+        Some("nowrap") => nbsp(collapse(s)),
+        _ => collapse(s),
+    }
+}
+
+/// `text-transform`
+fn transform(s: String, mode: Option<&str>) -> String {
+    match mode {
+        Some("uppercase") => s.to_uppercase(),
+        Some("lowercase") => s.to_lowercase(),
+        Some("capitalize") => {
+            let mut out = String::with_capacity(s.len());
+            let mut start = true;
+            for c in s.chars() {
+                if start && c.is_alphabetic() {
+                    out.extend(c.to_uppercase());
+                } else {
+                    out.push(c);
+                }
+                start = c.is_whitespace() || c == '-' || c == '\u{a0}';
+            }
+            out
+        }
+        _ => s,
+    }
 }
 
 fn collapse(s: &str) -> String {
@@ -225,6 +264,33 @@ impl<'a> Converter<'a> {
         )
     }
 
+    /// An inherited property (`white-space`, `text-transform`) of a node: from its nearest element ancestor
+    /// (or itself) that sets it.
+    fn inherited(&self, node: Id, prop: &str) -> Option<String> {
+        let mut cur = Some(node);
+        while let Some(id) = cur {
+            if let Some(v) = self.computed.prop(id, &[prop]) {
+                return match v.as_str() {
+                    "inherit" => {
+                        cur = self.dom.nodes[id].parent;
+                        continue;
+                    }
+                    "initial" | "unset" | "revert" | "normal" | "none" => None,
+                    _ => Some(v),
+                };
+            }
+            cur = self.dom.nodes[id].parent;
+        }
+        None
+    }
+
+    /// The text of a text node, with the `white-space` and `text-transform` of its element.
+    fn text_of(&self, node: Id, raw: &str) -> String {
+        let ws = self.inherited(node, "white-space");
+        let tt = self.inherited(node, "text-transform");
+        transform(white_space(raw, ws.as_deref()), tt.as_deref())
+    }
+
     fn href(&self, id: Id) -> Option<String> {
         let h = self.el(id)?.attr("href")?.trim();
         (!h.is_empty() && h != "#").then(|| h.to_string())
@@ -241,7 +307,7 @@ impl<'a> Converter<'a> {
         for &c in children {
             match &self.dom.nodes[c].data {
                 Data::Text(t) => {
-                    out.push(span(collapse(t), style, link));
+                    out.push(span(self.text_of(c, t), style, link));
                     continue;
                 }
                 Data::Element(_) => {}
@@ -260,10 +326,16 @@ impl<'a> Converter<'a> {
                 }
                 "b" | "strong" => s.font_weight = Some(700),
                 "i" | "em" => s.font_style = Some(FontStyle::Italic),
+                // browser defaults; the document's CSS (applied below) can override them
+                "u" | "ins" => s.text_decoration = Some(TextDecoration::Underline),
+                "s" | "del" | "strike" => s.text_decoration = Some(TextDecoration::LineThrough),
+                "sup" => s.vertical_align = Some(VerticalAlign::Super),
+                "sub" => s.vertical_align = Some(VerticalAlign::Sub),
                 "a" => {
                     if let Some(h) = self.href(c) {
                         l = Some(h);
                         s.color = Some(LINK_BLUE);
+                        s.text_decoration = Some(TextDecoration::Underline);
                     }
                 }
                 "turbopdf-span" => {
@@ -362,7 +434,11 @@ impl<'a> Converter<'a> {
                 if let Data::Text(t) = &self.dom.nodes[c].data {
                     let t = t.trim();
                     if !t.is_empty() {
-                        out.push(text_node(TextContent::Plain(collapse(t)), None, None));
+                        out.push(text_node(
+                            TextContent::Plain(self.text_of(c, t)),
+                            None,
+                            None,
+                        ));
                     }
                 } else if !self.is_content(c) || self.tag(c) == "br" {
                     continue;

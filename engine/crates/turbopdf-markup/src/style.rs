@@ -3,7 +3,8 @@
 
 use turbopdf_tree::{
     AlignItems, Color, Dimension, EdgeSides, Edges, FlexDirection, FlexWrap, FontStyle,
-    JustifyContent, LayoutMode, Position, Style, TextAlign, TextStyle,
+    FontVariantNumeric, JustifyContent, LayoutMode, Position, Style, TextAlign, TextDecoration,
+    TextStyle, VerticalAlign,
 };
 
 mod border;
@@ -520,6 +521,45 @@ pub fn parse_style(decls: &[Decl], inherited_font_size: f32) -> Style {
                     _ => s.text_align,
                 }
             }
+            "text-decoration" | "text-decoration-line" => {
+                let words: Vec<&str> = v.split_whitespace().collect();
+                s.text_decoration = if words.contains(&"none") {
+                    Some(TextDecoration::None)
+                } else if words.contains(&"underline") {
+                    Some(TextDecoration::Underline)
+                } else if words.contains(&"line-through") {
+                    Some(TextDecoration::LineThrough)
+                } else if words.contains(&"overline") {
+                    Some(TextDecoration::Overline)
+                } else {
+                    s.text_decoration
+                };
+            }
+            "letter-spacing" => {
+                s.letter_spacing = if v == "normal" {
+                    Some(0.0)
+                } else {
+                    css_length(v, fs).or(s.letter_spacing)
+                };
+            }
+            "vertical-align" => {
+                s.vertical_align = match v {
+                    "super" => Some(VerticalAlign::Super),
+                    "sub" => Some(VerticalAlign::Sub),
+                    "baseline" => Some(VerticalAlign::Baseline),
+                    _ => s.vertical_align,
+                };
+            }
+            "font-variant-numeric" => {
+                s.font_variant_numeric = if v.split_whitespace().any(|w| w == "tabular-nums") {
+                    Some(FontVariantNumeric::TabularNums)
+                } else if v == "normal" || v.contains("proportional-nums") {
+                    Some(FontVariantNumeric::Normal)
+                } else {
+                    s.font_variant_numeric
+                };
+            }
+            "text-indent" => s.text_indent = css_length(v, fs).or(s.text_indent),
             "line-height" => {
                 if is_plain_number(v) {
                     s.line_height = v.parse().ok();
@@ -548,6 +588,10 @@ pub fn text_style_of(s: &Style) -> TextStyle {
         font_weight: s.font_weight,
         font_style: s.font_style,
         color: s.color,
+        text_decoration: s.text_decoration,
+        letter_spacing: s.letter_spacing,
+        vertical_align: s.vertical_align,
+        font_variant_numeric: s.font_variant_numeric,
     }
 }
 
@@ -566,6 +610,10 @@ pub fn merge_text(base: &TextStyle, over: &TextStyle) -> TextStyle {
         font_weight: over.font_weight.or(base.font_weight),
         font_style: over.font_style.or(base.font_style),
         color: over.color.or(base.color),
+        text_decoration: over.text_decoration.or(base.text_decoration),
+        letter_spacing: over.letter_spacing.or(base.letter_spacing),
+        vertical_align: over.vertical_align.or(base.vertical_align),
+        font_variant_numeric: over.font_variant_numeric.or(base.font_variant_numeric),
     }
 }
 
@@ -623,6 +671,11 @@ pub fn merge(base: &Style, over: &Style) -> Style {
         color,
         text_align,
         line_height,
+        text_decoration,
+        letter_spacing,
+        vertical_align,
+        font_variant_numeric,
+        text_indent,
     );
     s.reset_sides_from(over);
     s

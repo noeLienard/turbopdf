@@ -90,9 +90,11 @@ Node types: `view`, `text`, `heading`, `image`, `table`, `page_break`, `page_num
 
 ## HTML and CSS that work
 
-Selectors: type, class, id, attribute, descendant, `>`, `:first-child`, `:last-child`, `:nth-child()`, `::before`/`::after`.
+Selectors: type, class, id, attribute (`=`, `^=`, `$=`, `*=`, `~=`, `|=`), descendant, `>`, `+`, `~`, `:not()`, `:is()`, `:where()`,
+`:first-child`, `:last-child`, `:nth-child()`, `:nth-of-type()`, `:first-of-type`, `:last-of-type`, `:only-child`, `:empty`, `::before`/`::after`.
 Properties: `display` block/flex/grid/none, Flexbox, Grid (`fr`, `repeat()`), width/height (min/max), margin, padding, border,
-border-radius, background(-color), color, font-*, line-height, text-align, `position: absolute`, `break-before/after/inside`,
+border-radius, background(-color), color, font-*, line-height, text-align, text-decoration, letter-spacing, text-transform,
+vertical-align super/sub, `font-variant-numeric: tabular-nums`, white-space, text-indent, float/clear, `position: absolute`, `break-before/after/inside`,
 `calc()`, `var()`, `@page { size; margin }`, `@media print`, local `@font-face`. Elements: block elements, p, h1–h6, span, b, i,
 br, hr, `a href`, `img` (PNG, JPEG, WebP, GIF, SVG), inline `<svg>`, table/thead (header repeats on every page), ul/ol, pre, blockquote.
 QR codes: `<img src="qr:TEXT" width="90">`, or `![alt](qr:TEXT)` in Markdown.

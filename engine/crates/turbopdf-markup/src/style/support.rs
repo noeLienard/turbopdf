@@ -27,7 +27,8 @@ const SUPPORTED: &[&str] = &[
     "grid-template-columns", "grid-template-rows",
     "break-before", "break-after", "break-inside",
     "page-break-before", "page-break-after", "page-break-inside",
-    "content",
+    "content", "text-decoration", "text-decoration-line", "letter-spacing", "vertical-align",
+    "font-variant-numeric", "text-indent", "white-space", "text-transform",
 ];
 
 /// Interaction, animation, rendering hints: nothing to draw on paper.

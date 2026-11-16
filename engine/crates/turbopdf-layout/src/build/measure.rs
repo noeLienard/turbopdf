@@ -22,6 +22,7 @@ impl State<'_, '_> {
         self.items.push(Item::Text(TextItem {
             prepared,
             align: inh2.align,
+            indent: inh2.indent,
             dynamic,
         }));
         let idx = self.items.len() - 1;
@@ -51,6 +52,7 @@ impl State<'_, '_> {
             };
             let mut opts = text::ParagraphOptions::new(width.max(0.0));
             opts.align = item.align;
+            opts.indent = item.indent;
             opts.lang = self.cx.lang.clone();
             opts.hyphenate = self.cx.hyphenate;
             let p = item

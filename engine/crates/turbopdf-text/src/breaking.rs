@@ -218,6 +218,7 @@ pub(crate) fn finish_line(
             && last.size == r.size
             && last.color == r.color
             && last.link == r.link
+            && last.effects == r.effects
             && (last.x + last.width() - r.x).abs() < 0.001
         {
             let shift = last.text.len();
