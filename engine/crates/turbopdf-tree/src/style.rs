@@ -1,7 +1,8 @@
 //! CSS-inspired styles. Every field is optional.
 //!
 //! **Inherited** (like CSS): `fontFamily`, `fontSize`, `fontWeight`, `fontStyle`, `color`,
-//! `textAlign`, `lineHeight`. All others are **not** inherited.
+//! `textAlign`, `lineHeight`, `textDecoration`, `letterSpacing`, `verticalAlign`, `fontVariantNumeric`,
+//! `textIndent`. All others are **not** inherited.
 
 use crate::value::{Color, Dimension, Edges};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,15 @@ string_enum!(JustifyContent {
 });
 string_enum!(TextAlign { Left = "left", Center = "center", Right = "right", Justify = "justify" });
 string_enum!(FontStyle { Normal = "normal", Italic = "italic" });
+string_enum!(TextDecoration { None = "none", Underline = "underline", LineThrough = "line-through", Overline = "overline" });
+string_enum!(
+    /// `super` / `sub`: the text is raised or lowered (give it a smaller `fontSize` too, as `<sup>` does).
+    VerticalAlign { Baseline = "baseline", Super = "super", Sub = "sub" }
+);
+string_enum!(
+    /// `tabular-nums`: every digit as wide as the others, so amounts line up in columns.
+    FontVariantNumeric { Normal = "normal", TabularNums = "tabular-nums" }
+);
 string_enum!(BorderStyle { Solid = "solid", Dashed = "dashed", Dotted = "dotted" });
 string_enum!(Position { Relative = "relative", Absolute = "absolute" });
 string_enum!(LayoutMode { Flex = "flex", Grid = "grid" });
@@ -167,6 +177,18 @@ pub struct Style {
     /// Multiplier of the font size (`1.4` = 140%).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_height: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<TextDecoration>,
+    /// Extra space after every character, in points (can be negative).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<VerticalAlign>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_variant_numeric: Option<FontVariantNumeric>,
+    /// Indent of the first line of each paragraph, in points (negative: a hanging indent).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_indent: Option<f32>,
 }
 
 /// Text-only subset of [`Style`], used by inline [`Span`](crate::node::Span)s.
@@ -188,6 +210,15 @@ pub struct TextStyle {
     pub font_style: Option<FontStyle>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<TextDecoration>,
+    /// Extra space after every character, in points (can be negative).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub letter_spacing: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<VerticalAlign>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_variant_numeric: Option<FontVariantNumeric>,
 }
 
 impl Style {

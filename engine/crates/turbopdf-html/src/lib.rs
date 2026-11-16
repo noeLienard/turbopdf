@@ -337,6 +337,18 @@ fn words(h: &mut String, db: &FontDb, x: f32, baseline: f32, run: &Run) {
     }
     let face = db.face(run.face);
     let top = baseline - run.size * face.ascender / face.units_per_em;
+    // what the browser must do inside each word to match the engine's advances
+    let mut extra = String::new();
+    if run.effects.letter_spacing != 0.0 {
+        let _ = write!(
+            extra,
+            ";letter-spacing:{}pt",
+            num(run.effects.letter_spacing)
+        );
+    }
+    if run.effects.tabular {
+        extra.push_str(";font-variant-numeric:tabular-nums");
+    }
     let mut pen = x;
     let mut start = pen;
     let mut range: Option<(usize, usize)> = None;
@@ -347,12 +359,13 @@ fn words(h: &mut String, db: &FontDb, x: f32, baseline: f32, run: &Run) {
         {
             let _ = write!(
                 h,
-                "<span class=\"pw pf{}\" style=\"left:{}pt;top:{}pt;font-size:{}pt;color:{}\">{}</span>",
+                "<span class=\"pw pf{}\" style=\"left:{}pt;top:{}pt;font-size:{}pt;color:{}{}\">{}</span>",
                 run.face,
                 num(start),
                 num(top),
                 num(run.size),
                 color(run.color),
+                extra,
                 esc(text)
             );
         }

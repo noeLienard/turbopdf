@@ -176,7 +176,11 @@ the `css` option and `style` attributes, cascaded by specificity (`!important` i
   percentage and `fr` tracks (`repeat()` included), `width` / `height` and their
   min/max, `margin`, `padding`, `border` and each side (`border-top`…, `border-width` / `-style` / `-color`
   with one to four values), `border-radius`, `background(-color)`, `color`, `font-family` (a list: the first
-  loaded family is used, the next ones draw the characters it lacks), `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`, `break-before` / `break-after` /
+  loaded family is used, the next ones draw the characters it lacks), `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`,
+  `text-decoration` (`underline`, `line-through`, `overline`; links, `<u>`, `<s>` / `<del>` are decorated as in a browser),
+  `letter-spacing`, `text-transform`, `vertical-align: super / sub` (and `<sup>` / `<sub>`), `font-variant-numeric:
+  tabular-nums` (digits of equal width, for amounts in columns), `white-space` (`nowrap`, `pre`, `pre-wrap`,
+  `pre-line`), `text-indent`, `break-before` / `break-after` /
   `break-inside` (and the `page-break-*` aliases), `position: absolute` (and `fixed`) with `top` / `right` /
   `bottom` / `left` / `inset`, placed in the parent box. Lengths accept `em`, `rem`, `vw`, `vh` and absolute
   units, plus `calc()`, `min()`, `max()` and `clamp()` when they resolve to a physical length.

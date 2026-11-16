@@ -45,6 +45,9 @@ pub struct Face {
     pub descender: f32,
     pub line_gap: f32,
     pub x_height: f32,
+    /// Underline and strikeout lines: (offset above the baseline, thickness), in font units.
+    pub underline: (f32, f32),
+    pub strikeout: (f32, f32),
     // Field order matters: `shaper` borrows from `data` and must be dropped first.
     shaper: ShapeFace<'static>,
     pub data: Arc<Vec<u8>>,
@@ -148,6 +151,16 @@ impl FontDb {
             descender: probe.descender() as f32,
             line_gap: probe.line_gap() as f32,
             x_height: probe.x_height().map(|v| v as f32).unwrap_or(upem * 0.5),
+            underline: probe
+                .underline_metrics()
+                .map(|m| (m.position as f32, m.thickness as f32))
+                .filter(|m| m.1 > 0.0)
+                .unwrap_or((-0.1 * upem, 0.05 * upem)),
+            strikeout: probe
+                .strikeout_metrics()
+                .map(|m| (m.position as f32, m.thickness as f32))
+                .filter(|m| m.1 > 0.0)
+                .unwrap_or((0.3 * upem, 0.05 * upem)),
             shaper: probe,
             data,
         };

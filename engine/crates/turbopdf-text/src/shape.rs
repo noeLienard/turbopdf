@@ -8,14 +8,17 @@ pub(crate) fn fallback_face(db: &FontDb, face: FaceId) -> FaceId {
     db.select("Inter", f.weight, f.italic)
 }
 
+/// A shaped word: face, size (bits), text, tabular digits.
+type RunKey = (FaceId, u32, String, bool);
+
 /// Memory of already-shaped words. Tables repeat the same words thousands of times; shaping is the
 /// expensive part, so identical (face, size, text) are shaped once. Lookup only: never iterated.
 #[derive(Default)]
 pub struct ShapeCache {
-    runs: std::collections::HashMap<(FaceId, u32, String), (Run, Vec<MissingGlyph>)>,
+    runs: std::collections::HashMap<RunKey, (Run, Vec<MissingGlyph>)>,
     /// Compiled OpenType plans. Building one walks the GSUB/GPOS feature lists, which costs more than
-    /// shaping a short word, so each (face, script) is compiled once.
-    plans: std::collections::HashMap<(FaceId, Script), ShapePlan>,
+    /// shaping a short word, so each (face, script, tabular digits) is compiled once.
+    plans: std::collections::HashMap<(FaceId, Script, bool), ShapePlan>,
 }
 
 impl ShapeCache {
@@ -27,10 +30,10 @@ impl ShapeCache {
 /// Shape `text` with one face. `missing` collects chars mapped to glyph 0.
 pub(crate) fn shape(
     db: &FontDb,
-    plans: &mut std::collections::HashMap<(FaceId, Script), ShapePlan>,
+    plans: &mut std::collections::HashMap<(FaceId, Script, bool), ShapePlan>,
     face: FaceId,
     size: f32,
-    color: Rgba,
+    tabular: bool,
     text: &str,
     missing: &mut Vec<MissingGlyph>,
 ) -> Run {
@@ -41,9 +44,24 @@ pub(crate) fn shape(
     buffer.set_direction(Direction::LeftToRight);
     buffer.guess_segment_properties();
     let script = buffer.script();
-    let plan = plans
-        .entry((face, script))
-        .or_insert_with(|| ShapePlan::new(shaper, Direction::LeftToRight, Some(script), None, &[]));
+    let plan = plans.entry((face, script, tabular)).or_insert_with(|| {
+        let features: Vec<rustybuzz::Feature> = if tabular {
+            vec![rustybuzz::Feature::new(
+                rustybuzz::ttf_parser::Tag::from_bytes(b"tnum"),
+                1,
+                ..,
+            )]
+        } else {
+            Vec::new()
+        };
+        ShapePlan::new(
+            shaper,
+            Direction::LeftToRight,
+            Some(script),
+            None,
+            &features,
+        )
+    });
     let out = rustybuzz::shape_with_plan(shaper, plan, buffer);
     let upem = f.units_per_em;
     let infos = out.glyph_infos();
@@ -80,8 +98,13 @@ pub(crate) fn shape(
     Run {
         face,
         size,
-        color,
+        color: [0, 0, 0, 255], // set by `with_effects`
         link: None,
+        effects: Effects {
+            tabular,
+            ..Effects::default()
+        },
+        decoration_line: None,
         x: 0.0,
         text: text.to_string(),
         glyphs,
@@ -120,21 +143,18 @@ pub(crate) fn shape_with_fallback(
             _ => chunks.push((id, c.to_string())),
         }
     }
+    let finish = |run: Run| with_effects(db, run, &style);
     chunks
         .into_iter()
         .map(|(id, s)| {
-            let key = (id, style.size.to_bits(), s);
+            let key = (id, style.size.to_bits(), s, style.effects.tabular);
             if let Some((run, miss)) = cache.runs.get(&key) {
                 for m in miss {
                     if !missing.contains(m) {
                         missing.push(m.clone());
                     }
                 }
-                return Run {
-                    color: style.color,
-                    link: style.link,
-                    ..run.clone()
-                };
+                return finish(run.clone());
             }
             let mut local = Vec::new();
             let run = shape(
@@ -142,7 +162,7 @@ pub(crate) fn shape_with_fallback(
                 &mut cache.plans,
                 id,
                 style.size,
-                style.color,
+                style.effects.tabular,
                 &key.2,
                 &mut local,
             );
@@ -152,10 +172,37 @@ pub(crate) fn shape_with_fallback(
                 }
             }
             cache.runs.insert(key, (run.clone(), local));
-            Run {
-                link: style.link,
-                ..run
-            }
+            finish(run)
         })
         .collect()
+}
+
+/// A shaped (possibly cached) run with the span's color, link and effects; letter spacing goes after the
+/// last glyph of every character cluster.
+fn with_effects(db: &FontDb, mut run: Run, style: &TextStyle) -> Run {
+    run.color = style.color;
+    run.link = style.link;
+    run.effects = style.effects;
+    let f = db.face(run.face);
+    let k = run.size / f.units_per_em;
+    // OpenType gives the top of the line (`post` / `OS/2`), above the baseline when positive
+    let line = |(top, thick): (f32, f32)| Some((top * k - thick * k / 2.0, thick * k));
+    run.decoration_line = match style.effects.decoration {
+        Decoration::None => None,
+        Decoration::Underline => line(f.underline),
+        Decoration::LineThrough => line(f.strikeout),
+        Decoration::Overline => line((f.ascender, f.underline.1)),
+    };
+    let ls = style.effects.letter_spacing;
+    if ls != 0.0 && run.size > 0.0 {
+        let n = run.glyphs.len();
+        for i in 0..n {
+            let last_of_cluster =
+                i + 1 == n || run.glyphs[i + 1].range.start != run.glyphs[i].range.start;
+            if last_of_cluster {
+                run.glyphs[i].advance_em += ls / run.size;
+            }
+        }
+    }
+    run
 }

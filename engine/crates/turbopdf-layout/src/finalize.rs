@@ -52,6 +52,7 @@ fn watermark_ops(db: &FontDb, w: &t::Watermark, pw: f32, ph: f32) -> Vec<DrawOp>
             color,
             line_height: 1.0,
             link: None,
+            effects: text::Effects::default(),
         };
         text::layout(
             db,
@@ -482,9 +483,14 @@ pub fn run(
                                 let mut r = run.clone();
                                 let rx = *x + r.x;
                                 r.x = 0.0;
+                                let baseline = ly + l.baseline + oy - r.effects.rise;
+                                if let Some(line) = crate::decoration_box(rx + ox, baseline, &r) {
+                                    ops.push(line);
+                                    tags.push(Tag::Artifact(ArtifactKind::Layout));
+                                }
                                 ops.push(DrawOp::Text {
                                     x: rx + ox,
-                                    baseline: ly + l.baseline + oy,
+                                    baseline,
                                     run: r,
                                 });
                                 tags.push(tag);

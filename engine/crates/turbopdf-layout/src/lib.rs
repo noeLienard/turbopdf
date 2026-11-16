@@ -113,6 +113,25 @@ pub enum DrawOp {
     },
 }
 
+/// The underline, strikeout or overline of a run drawn at `baseline` (already shifted by its rise): a thin
+/// filled box of the run's color, so every output (PDF, PNG, HTML preview) draws it the same way.
+pub(crate) fn decoration_box(x: f32, baseline: f32, run: &Run) -> Option<DrawOp> {
+    let (center, thickness) = run.decoration_line?;
+    let w = run.width();
+    (w > 0.0 && thickness > 0.0).then(|| DrawOp::Box {
+        x,
+        y: baseline - center - thickness / 2.0,
+        w,
+        h: thickness,
+        visual: Visual {
+            background: Some(run.color),
+            border: [None; 4],
+            radius: 0.0,
+        },
+        sides: [true; 4],
+    })
+}
+
 /// A clickable area. `link` indexes [`Layout::links`]; `elem` is its `Link` structure element.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LinkRect {

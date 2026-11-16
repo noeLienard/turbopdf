@@ -208,6 +208,7 @@ struct TextItem {
     /// Shaped once; `None` for empty text.
     prepared: Option<text::Prepared>,
     align: text::Align,
+    indent: f32,
     dynamic: Option<DynamicText>,
 }
 

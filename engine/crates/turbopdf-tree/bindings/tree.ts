@@ -95,6 +95,11 @@ weight: number, style?: FontStyle, source: BinarySource, };
 
 export type FontStyle = "normal" | "italic";
 
+/**
+ * `tabular-nums`: every digit as wide as the others, so amounts line up in columns.
+ */
+export type FontVariantNumeric = "normal" | "tabular-nums";
+
 export type Heading = { id?: string, 
 /**
  * 1..=6. Default sizes: 28, 22, 18, 15, 13, 11pt, weight 700 (600 for 4–6).
@@ -304,7 +309,15 @@ fontWeight?: number, fontStyle?: FontStyle, color?: Color, textAlign?: TextAlign
 /**
  * Multiplier of the font size (`1.4` = 140%).
  */
-lineHeight?: number, };
+lineHeight?: number, textDecoration?: TextDecoration, 
+/**
+ * Extra space after every character, in points (can be negative).
+ */
+letterSpacing?: number, verticalAlign?: VerticalAlign, fontVariantNumeric?: FontVariantNumeric, 
+/**
+ * Indent of the first line of each paragraph, in points (negative: a hanging indent).
+ */
+textIndent?: number, };
 
 export type Table = { id?: string, style?: Style, columns: Array<Column>, 
 /**
@@ -363,10 +376,21 @@ export type TextAlign = "left" | "center" | "right" | "justify";
  */
 export type TextContent = string | Array<Span>;
 
+export type TextDecoration = "none" | "underline" | "line-through" | "overline";
+
 /**
  * Text-only subset of [`Style`], used by inline [`Span`](crate::node::Span)s.
  */
-export type TextStyle = { fontFamily?: string, fontSize?: number, fontWeight?: number, fontStyle?: FontStyle, color?: Color, };
+export type TextStyle = { fontFamily?: string, fontSize?: number, fontWeight?: number, fontStyle?: FontStyle, color?: Color, textDecoration?: TextDecoration, 
+/**
+ * Extra space after every character, in points (can be negative).
+ */
+letterSpacing?: number, verticalAlign?: VerticalAlign, fontVariantNumeric?: FontVariantNumeric, };
+
+/**
+ * `super` / `sub`: the text is raised or lowered (give it a smaller `fontSize` too, as `<sup>` does).
+ */
+export type VerticalAlign = "baseline" | "super" | "sub";
 
 /**
  * Flex container (`display: flex`, default direction `column`).

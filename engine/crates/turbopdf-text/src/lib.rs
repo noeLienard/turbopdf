@@ -15,6 +15,27 @@ use shape::*;
 
 pub type Rgba = [u8; 4];
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Decoration {
+    #[default]
+    None,
+    Underline,
+    LineThrough,
+    Overline,
+}
+
+/// How a span is drawn beyond face, size and color. Runs only merge when these are equal.
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub struct Effects {
+    pub decoration: Decoration,
+    /// Baseline shift in points, up (`super`) or down (`sub`, negative).
+    pub rise: f32,
+    /// Extra space after every character, in points. Already in the glyph advances.
+    pub letter_spacing: f32,
+    /// Tabular digits (OpenType `tnum`).
+    pub tabular: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TextStyle {
     pub face: FaceId,
@@ -27,6 +48,7 @@ pub struct TextStyle {
     pub line_height: f32,
     /// Index of a link target in the caller's table: the glyphs of this span are clickable.
     pub link: Option<u32>,
+    pub effects: Effects,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -51,6 +73,8 @@ pub struct ParagraphOptions {
     /// BCP 47 language ("fr", "en-US"). Used for hyphenation only.
     pub lang: Option<String>,
     pub hyphenate: bool,
+    /// Indent of the first line, in points (negative: hanging).
+    pub indent: f32,
 }
 
 impl ParagraphOptions {
@@ -60,6 +84,7 @@ impl ParagraphOptions {
             align: Align::Left,
             lang: None,
             hyphenate: false,
+            indent: 0.0,
         }
     }
 }
@@ -84,6 +109,10 @@ pub struct Run {
     pub color: Rgba,
     /// See [`TextStyle::link`].
     pub link: Option<u32>,
+    pub effects: Effects,
+    /// The line of [`Effects::decoration`], from the font's metrics: (offset of its center above the
+    /// baseline, thickness), in points.
+    pub decoration_line: Option<(f32, f32)>,
     /// X of the first glyph, relative to the start of the line box.
     pub x: f32,
     pub text: String,
@@ -217,17 +246,26 @@ pub fn layout_prepared(db: &FontDb, prepared: &Prepared, opts: &ParagraphOptions
     let mut pending_space: Option<Unit> = None;
     let mut queue: std::collections::VecDeque<Unit> = units.into();
 
+    // the first line is `indent` narrower, and shifted by it
+    let width_of = |lines: &Vec<Line>| {
+        if lines.is_empty() {
+            opts.max_width - opts.indent
+        } else {
+            opts.max_width
+        }
+    };
     let flush = |cur: &mut Pending, lines: &mut Vec<Line>, forced: bool| {
         let units = std::mem::take(&mut cur.units);
         cur.width = 0.0;
-        lines.push(finish_line(
-            db,
-            units,
-            opts.max_width,
-            opts.align,
-            !forced,
-            &base,
-        ));
+        let first = lines.is_empty();
+        let mut line = finish_line(db, units, width_of(lines), opts.align, !forced, &base);
+        if first && opts.indent != 0.0 {
+            for r in &mut line.runs {
+                r.x += opts.indent;
+            }
+            line.width += opts.indent;
+        }
+        lines.push(line);
     };
 
     while let Some(unit) = queue.pop_front() {
@@ -243,7 +281,8 @@ pub fn layout_prepared(db: &FontDb, prepared: &Prepared, opts: &ParagraphOptions
             }
             Kind::Word => {
                 let space_w = pending_space.as_ref().map_or(0.0, |s| s.width);
-                let fits = cur.width + space_w + unit.width <= opts.max_width + eps;
+                let max_width = width_of(&lines);
+                let fits = cur.width + space_w + unit.width <= max_width + eps;
                 if fits {
                     if let Some(s) = pending_space.take() {
                         cur.width += s.width;
@@ -255,9 +294,8 @@ pub fn layout_prepared(db: &FontDb, prepared: &Prepared, opts: &ParagraphOptions
                 }
                 // does not fit: try hyphenation (also for the first word of a line)
                 if let (Some(lang), false) = (lang, unit.text.is_empty()) {
-                    let avail = opts.max_width
-                        - cur.width
-                        - if cur.units.is_empty() { 0.0 } else { space_w };
+                    let avail =
+                        max_width - cur.width - if cur.units.is_empty() { 0.0 } else { space_w };
                     let mut best: Option<usize> = None;
                     let mut at = 0;
                     for syl in hypher::hyphenate(&unit.text, lang) {

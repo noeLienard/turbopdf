@@ -10,6 +10,15 @@ All notable changes to this project are documented here. The format follows [Kee
   `:only-child`, `:only-of-type`, `:nth-of-type()`, `:nth-last-child()`, `:nth-last-of-type()`, `:empty`, the
   attribute operators `~=` `|=` `^=` `$=` `*=` and the `i` flag.
 - `unsupported_css` warning: each CSS property or selector that is ignored, with how often it is used.
+- CSS typography: `text-decoration` (underline, line-through, overline), `letter-spacing`, `text-transform`,
+  `vertical-align: super / sub`, `font-variant-numeric: tabular-nums`, `white-space` and `text-indent`, in the
+  PDF, the PNGs and the HTML preview. The tree gets the matching `textDecoration`, `letterSpacing`,
+  `verticalAlign`, `fontVariantNumeric` and `textIndent` fields.
+
+### Changed
+
+- Links, `<u>` / `<ins>` are underlined and `<s>` / `<del>` struck through, as in a browser; `<sup>` / `<sub>`
+  are raised / lowered and smaller. `text-decoration: none` removes the line.
 
 ## 0.1.0 — 2026-11-16
 
