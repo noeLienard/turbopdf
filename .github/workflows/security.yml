@@ -23,14 +23,13 @@ jobs:
       - run: npm audit --audit-level=low
 
   rust-audit:
+    # plain `cargo audit`: needs no write token, so it also runs on pull requests from forks
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-      issues: write
     steps:
       - uses: actions/checkout@v5
-      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+      - uses: taiki-e/install-action@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: engine
+          tool: cargo-audit
+      - name: cargo audit
+        working-directory: engine
+        run: cargo audit --deny warnings
