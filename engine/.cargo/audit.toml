@@ -1,0 +1,12 @@
+# cargo audit (CI: .github/workflows/security.yml runs it with --deny warnings).
+# Every ignored advisory says why; anything new fails the build.
+[advisories]
+ignore = [
+  # rustybuzz and ttf-parser are unmaintained, but krilla (PDF) and usvg / fontdb (SVG) depend on them
+  # too: they go away when those move on (e.g. to harfrust / skrifa). No known vulnerability.
+  "RUSTSEC-2026-0206", # rustybuzz: unmaintained
+  "RUSTSEC-2026-0192", # ttf-parser: unmaintained
+  # lru is only pulled in by rqrr, a dev-dependency that decodes QR codes in tests: never shipped.
+  "RUSTSEC-2026-0002", # lru: IterMut violates Stacked Borrows
+  "RUSTSEC-2026-0253", # lru: use-after-free if LruCache::pop() panics
+]
