@@ -145,7 +145,7 @@ To render a web page, fetch its HTML yourself and pass `{ html, baseDir }`: Turb
 | `margin` | `'10mm'` | A CSS length (`'15mm'`), a number of CSS pixels, or `{ top, right, bottom, left }` |
 | `css` | – | Extra CSS for `html` and `react`, applied after the document's own |
 | `header`, `footer` | – | HTML repeated on every page. `{page}` and `{pages}` are replaced. See [below](#headers-and-footers). |
-| `fonts` | – | `[{ family, path \| data, weight?, style? }]`: `.ttf` / `.otf` fonts to embed |
+| `fonts` | – | `[{ family, path \| data, weight?, style? }]`: `.ttf`, `.otf`, `.woff` or `.woff2` fonts to embed (e.g. from `@fontsource/*`) |
 | `watermark` | – | Text stamped diagonally on every page (`'PAID'`), or `{ text, color, fontSize, fontWeight, angle }` |
 | `bookmarks` | `true` | PDF bookmarks from the h1–h3 headings |
 | `title`, `lang` | from the source | Document title and language (`<title>`, `<html lang>`, `<Document>`; Markdown: the first `# heading`) |
@@ -190,11 +190,11 @@ the `css` option and `style` attributes, cascaded by specificity (`!important` i
   `hr`, `a href` (a URL or `#id`, around text or around a whole block), `img` (PNG, JPEG, WebP, GIF, SVG),
   inline `<svg>` (drawn as vectors), `table` (with `thead`, repeated on every page), `ul` / `ol`, `pre`,
   `blockquote`. `<title>` and `<html lang>` fill the PDF metadata.
-- **Fonts**: `@font-face { font-family: Brand; src: url(fonts/brand.ttf) }` with local `.ttf` / `.otf` files,
+- **Fonts**: `@font-face { font-family: Brand; src: url(fonts/brand.ttf) }` with local `.ttf`, `.otf`, `.woff` or `.woff2` files,
   read inside `baseDir` (relative to the stylesheet that declares them).
 
 Every property or selector that is not supported gives an `unsupported_css` warning, so you know why the PDF
-differs from a browser. Not supported: JavaScript, web fonts downloaded from a URL and WOFF / WOFF2 files (a
+differs from a browser. Not supported: JavaScript, web fonts downloaded from a URL (a
 `font_failed` warning says what to do), remote images and stylesheets (each one gives a warning).
 
 ### Markdown
@@ -384,7 +384,7 @@ for (const w of pdf.warnings) console.warn(w.type, w.message);
 | `missing_glyph` | A character is not in any loaded font |
 | `image_failed` | An image could not be loaded (missing file, corrupt data, remote URL) |
 | `stylesheet_failed` | A `<link>` stylesheet was not applied (remote, missing, or outside `baseDir`) |
-| `font_failed` | An `@font-face` font was not loaded (remote, WOFF, missing, or outside `baseDir`) |
+| `font_failed` | An `@font-face` font was not loaded (remote, missing, invalid, or outside `baseDir`) |
 | `unsupported_css` | A CSS property or selector the converter does not support was ignored (one warning each, with how often it is used). Screen-only properties (`cursor`, `transition`…) are ignored silently |
 | `broken_link` | A link to `#id` points to no element |
 | `missing_alt` | `pdfua`: an image has no `alt`, it was marked decorative |

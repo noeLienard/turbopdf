@@ -258,11 +258,13 @@ fn unsupported_css(sheet: &Stylesheet, dom: &Dom, out: &mut Converted) {
     }
 }
 
-const FONT_FORMATS: &[&str] = &["truetype", "opentype", "ttf", "otf"];
+const FONT_FORMATS: &[&str] = &["truetype", "opentype", "ttf", "otf", "woff", "woff2"];
 
 fn is_font_file(url: &str) -> bool {
     let u = url.to_ascii_lowercase();
-    u.ends_with(".ttf") || u.ends_with(".otf")
+    [".ttf", ".otf", ".woff", ".woff2"]
+        .iter()
+        .any(|e| u.ends_with(e))
 }
 
 /// `@font-face` rules → fonts: the first local .ttf / .otf source (or `data:` URL) of each rule.
@@ -284,6 +286,7 @@ fn font_faces(rules: &[FontFaceRule], loader: &dyn ResourceLoader, out: &mut Con
                     || mime.contains("otf")
                     || mime.contains("truetype")
                     || mime.contains("opentype")
+                    || mime.contains("woff")
             })
         });
         let local = rule.src.iter().find(|(url, format)| {
@@ -315,9 +318,9 @@ fn font_faces(rules: &[FontFaceRule], loader: &dyn ResourceLoader, out: &mut Con
             fail(
                 first,
                 if is_remote(first) {
-                    "web fonts are never downloaded. Put the .ttf / .otf file next to your HTML and use url(fonts/…)."
+                    "web fonts are never downloaded. Put the font file (.ttf, .otf, .woff, .woff2) next to your HTML and use url(fonts/…)."
                 } else {
-                    "only .ttf and .otf files are supported (not WOFF / WOFF2): convert it, e.g. with fonttools."
+                    "only .ttf, .otf, .woff and .woff2 files are supported."
                 },
             );
             continue;

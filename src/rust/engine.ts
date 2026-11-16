@@ -74,8 +74,8 @@ async function fontsOf(o: CreateOptions, buffers?: Uint8Array[]): Promise<FontFa
   const out: FontFace[] = [];
   for (const f of o.fonts) {
     if (!f.family || (f.path === undefined) === (f.data === undefined)) throw invalid('Each font needs a `family` and exactly one of `path` or `data`.');
-    if (f.path !== undefined && !/\.(ttf|otf)$/i.test(f.path)) {
-      throw invalid(`Unsupported font file "${f.path}". Use .ttf or .otf (WOFF / WOFF2 are not supported).`);
+    if (f.path !== undefined && !/\.(ttf|otf|woff2?)$/i.test(f.path)) {
+      throw invalid(`Unsupported font file "${f.path}". Use .ttf, .otf, .woff or .woff2.`);
     }
     // a path is read by the engine, inside baseDir; bytes go next to the tree, without base64
     let source: FontFace['source'];
