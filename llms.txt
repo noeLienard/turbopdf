@@ -46,6 +46,7 @@ pdf.toResponse({ filename: 'invoice.pdf', disposition: 'attachment' });   // web
 pdf.pages;                                                 // page count
 pdf.warnings;                                              // { type, message, path?, page? }[]
 const preview = await pdf.preview();                       // HTML/CSS: { style, pages: [{ page, width, height, html }], toHtml() }
+const fit = await pdf.preview({ scaleToFit: true });      // pages shrink as a whole to fit their container (parent needs a width)
 const pngs = await pdf.toPng({ scale: 2 });                // [{ page, save(path), toDataUrl() }]
 ```
 

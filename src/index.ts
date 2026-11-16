@@ -18,6 +18,7 @@ export type {
   PngOptions,
   PngPage,
   Preview,
+  PreviewOptions,
   PreviewPage,
   ReactElementLike,
   ResponseOptions,
