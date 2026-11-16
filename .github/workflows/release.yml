@@ -95,6 +95,7 @@ jobs:
           path: artifacts
       - name: Lay out the packages
         run: |
+          mkdir -p wasm
           mv artifacts/engine-wasm/turbopdf.wasm wasm/turbopdf.wasm
           for d in artifacts/engine-*; do mv "$d" "artifacts/${d#artifacts/engine-}"; done
           node scripts/package-platforms.mjs artifacts
