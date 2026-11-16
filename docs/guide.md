@@ -416,6 +416,15 @@ in a browser). The PDF gives `toUint8Array()`, `toResponse()`, `preview()` and `
 `toUint8Array()`, `toDataUrl()`); `save()`, `toBuffer()` and `toStream()` are Node-only. There is no file
 system: pass fonts as bytes (`fonts: [{ family, data }]`) and images as `data:` URLs.
 
+React works too, but the edge build never imports React itself (an import that cannot be resolved would stop
+the Worker from loading even when unused), so pass the renderer once:
+
+```ts
+import { renderToStaticMarkup } from 'react-dom/server';
+await init(wasm, { renderToStaticMarkup });
+const pdf = await create(<Invoice />);
+```
+
 The engine is 4.3 MB gzipped: it fits Cloudflare Workers on the paid plan (10 MB) and Deno Deploy / Netlify
 Edge, but not the Cloudflare free plan (3 MB) or Vercel Edge Functions; on Vercel, use the Node.js runtime
 (native engine). Renders run on the calling thread, so `timeout` cannot interrupt one in progress.

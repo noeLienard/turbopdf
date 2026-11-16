@@ -8,7 +8,7 @@ import type { CreateOptions, Format, ReactElementLike, Warning } from '../types'
 import { markdownToNodes } from './markdown';
 import { toBase64 } from '../bytes';
 import { nativeError, type NativeDocument } from './engine-api';
-import { defaultBaseDir, engine } from './provider';
+import { defaultBaseDir, engine, reactRenderer } from './provider';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
@@ -91,14 +91,15 @@ async function fontsOf(o: CreateOptions, buffers?: Uint8Array[]): Promise<FontFa
 
 async function reactMarkup(element: unknown): Promise<string> {
   if (!isReactElement(element)) throw invalid('`react` must be a React element, e.g. react: <Invoice />.');
-  let server: { renderToStaticMarkup(el: unknown): string };
-  try {
-    server = (await import('react-dom/server')) as unknown as typeof server;
-  } catch (cause) {
-    throw new TurboPdfError('react_not_installed', 'A React element was passed but "react" and "react-dom" are not installed. Run: npm install react react-dom', { cause });
+  const render = await reactRenderer();
+  if (!render) {
+    throw new TurboPdfError(
+      'react_not_installed',
+      'A React element was passed but no React renderer is set up. On the edge, pass it to init(): `import { renderToStaticMarkup } from "react-dom/server"; await init(wasm, { renderToStaticMarkup })`.',
+    );
   }
   try {
-    return server.renderToStaticMarkup(element);
+    return render(element);
   } catch (cause) {
     throw new TurboPdfError('render_failed', `Your React component threw while rendering: ${(cause as Error).message}`, { cause });
   }

@@ -2,6 +2,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { create, init } from '../src/edge';
 
 const wasmFile = join(__dirname, '..', 'wasm', 'turbopdf.wasm');
@@ -26,6 +28,15 @@ describe.skipIf(!existsSync(wasmFile))('turbopdf/edge', () => {
     expect(page!.toDataUrl()).toMatch(/^data:image\/png;base64,/);
     expect((await pdf.preview()).pages).toHaveLength(pdf.pages);
     expect((await create({ markdown: '# Report\n\n| a | b |\n|---|---|\n| 1 | 2 |' })).pages).toBe(1);
+  });
+
+  it('renders React only with the renderer given to init(), and never imports React itself', async () => {
+    await init(wasm);
+    const el = createElement('h1', null, 'From React');
+    await expect(create(el)).rejects.toMatchObject({ code: 'react_not_installed' });
+    await init(wasm, { renderToStaticMarkup });
+    expect((await create(el)).pages).toBe(1);
+    expect(readFileSync(join(__dirname, '..', 'src', 'edge.ts'), 'utf8')).not.toMatch(/import\(|from 'react/);
   });
 
   it('takes fonts as bytes and refuses files, which edge runtimes do not have', async () => {

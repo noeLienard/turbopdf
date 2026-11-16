@@ -4,7 +4,7 @@
 //
 //   import { init, create } from 'turbopdf/edge';
 //   import wasm from 'turbopdf/turbopdf.wasm';     // Cloudflare Workers; elsewhere a URL or the bytes
-//   await init(wasm);
+//   await init(wasm);                              // React: init(wasm, { renderToStaticMarkup })
 //   const pdf = await create('<h1>Hello</h1>');
 //   return pdf.toResponse();
 import { EdgePdfImpl, render } from './core';
@@ -24,6 +24,7 @@ export type { CreateOptions, EdgePdf, EdgePngPage, EdgePreview, PngOptions, Prev
 export type WasmSource = WebAssembly.Module | ArrayBuffer | ArrayBufferView | Response | Promise<Response> | URL | string;
 
 let ready: Promise<NativeEngine> | undefined;
+let reactRender: ((element: unknown) => string) | undefined;
 
 async function compile(source: WasmSource): Promise<WebAssembly.Module> {
   if (source instanceof WebAssembly.Module) return source;
@@ -36,12 +37,21 @@ async function compile(source: WasmSource): Promise<WebAssembly.Module> {
   return WebAssembly.compile(source as BufferSource);
 }
 
-/** Load the engine (`turbopdf/turbopdf.wasm` of the package). Call it once; later calls reuse it. */
-export function init(source: WasmSource): Promise<void> {
+export interface InitOptions {
+  /**
+   * To render React elements: `renderToStaticMarkup` from `react-dom/server`. The edge build never imports
+   * React itself, so a Worker that does not use it does not need it installed.
+   */
+  renderToStaticMarkup?: (element: never) => string;
+}
+
+/** Load the engine (`turbopdf/turbopdf.wasm` of the package). Call it once; later calls reuse the engine. */
+export function init(source: WasmSource, options: InitOptions = {}): Promise<void> {
+  if (options.renderToStaticMarkup) reactRender = options.renderToStaticMarkup as (element: unknown) => string;
   ready ??= compile(source).then(
     (module) => {
       const engine = inThread(core(module));
-      setHost({ engine: () => engine, baseDir: () => undefined });
+      setHost({ engine: () => engine, baseDir: () => undefined, react: async () => reactRender });
       return engine;
     },
     (cause: unknown) => {
