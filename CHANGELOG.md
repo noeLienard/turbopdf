@@ -14,7 +14,6 @@ All notable changes to this project are documented here. The format follows [Kee
   `vertical-align: super / sub`, `font-variant-numeric: tabular-nums`, `white-space` and `text-indent`, in the
   PDF, the PNGs and the HTML preview. The tree gets the matching `textDecoration`, `letterSpacing`,
   `verticalAlign`, `fontVariantNumeric` and `textIndent` fields.
-
 - WOFF and WOFF2 fonts (`fonts` option and `@font-face`), e.g. the files of `@fontsource/*` packages.
 
 ### Changed
