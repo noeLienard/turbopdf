@@ -418,6 +418,7 @@ Every `message` is in English and says what to do. In CI, pass `strict: true` to
 ```ts
 turbopdf.configure({ concurrency: 4 });
 await turbopdf.warmup(); // optional: load the engine before the first request
+turbopdf.engineInfo();   // { kind: 'native' | 'wasm', target: 'linux-x64-gnu', version, fallbackReason? }
 ```
 
 - Renders run on Node's thread pool, never on the main thread. `concurrency` (default 4) caps how many run at once; the others wait in line.
@@ -426,6 +427,37 @@ await turbopdf.warmup(); // optional: load the engine before the first request
   Windows x64; npm installs only the one for your machine. Anywhere else (another CPU, Windows on Arm, a missing
   binary) TurboPDF uses the **same engine compiled to WebAssembly**, automatically: same bytes out, 1.3–2× slower,
   still in a worker thread. `TURBOPDF_ENGINE=wasm` forces it, `TURBOPDF_ENGINE=native` refuses it.
+- If a prebuilt native engine exists for the machine but fails to load (or was not installed), TurboPDF prints
+  one `[turbopdf] using the slower WebAssembly engine: …` warning with the loader's message, and
+  `engineInfo().fallbackReason` gives the same text. `TURBOPDF_NO_FALLBACK_WARNING=1` hides the warning.
+  With `TURBOPDF_ENGINE=native`, the `engine_unavailable` error carries the loader error as its `cause`.
+- The Linux glibc binaries need glibc 2.17 or newer: Amazon Linux 2 and 2023 (AWS Lambda, Vercel), Debian 10+,
+  Ubuntu 18.04+, RHEL 7+.
+
+### Serverless (Vercel, AWS Lambda, Netlify)
+
+Nothing to configure: the native engine, the WebAssembly engine and its worker are loaded with literal paths,
+so Vercel, Netlify and Next.js `output: 'standalone'` deploy them without `outputFileTracingIncludes`. In
+Next.js, keep TurboPDF out of the bundle and warm it at module scope, so the first request does not pay for it:
+
+```ts
+// next.config.ts
+export default { serverExternalPackages: ['turbopdf'] };
+
+// app/api/invoice/route.ts
+import turbopdf from 'turbopdf';
+
+export const runtime = 'nodejs';
+void turbopdf.warmup(); // once per instance: loads the engine while the function starts
+
+export async function GET() {
+  const pdf = await turbopdf.create('<h1>Invoice</h1>');
+  return pdf.toResponse({ filename: 'invoice.pdf' });
+}
+```
+
+A new instance pays about 25 ms (import + first PDF) with the native engine, 125 ms with WebAssembly
+(`node bench/cold.mjs`, Apple M-series). Log `turbopdf.engineInfo()` once to check which one runs.
 
 ### Where it runs
 

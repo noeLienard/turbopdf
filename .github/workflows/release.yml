@@ -20,8 +20,10 @@ jobs:
         include:
           - { target: darwin-arm64, os: macos-15, rust: aarch64-apple-darwin }
           - { target: darwin-x64, os: macos-15-intel, rust: x86_64-apple-darwin }
-          - { target: linux-x64-gnu, os: ubuntu-22.04, rust: x86_64-unknown-linux-gnu }
-          - { target: linux-arm64-gnu, os: ubuntu-22.04-arm, rust: aarch64-unknown-linux-gnu }
+          # Linux glibc: linked against glibc 2.17 with zig, so the engine loads on Amazon Linux 2023
+          # (AWS Lambda, Vercel), Debian 10, RHEL 7… and not only on glibc >= the runner's 2.35
+          - { target: linux-x64-gnu, os: ubuntu-22.04, rust: x86_64-unknown-linux-gnu, zig: x86_64-unknown-linux-gnu.2.17 }
+          - { target: linux-arm64-gnu, os: ubuntu-22.04-arm, rust: aarch64-unknown-linux-gnu, zig: aarch64-unknown-linux-gnu.2.17 }
           - { target: win32-x64-msvc, os: windows-latest, rust: x86_64-pc-windows-msvc }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
@@ -31,7 +33,15 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - name: Install zig and cargo-zigbuild
+        if: matrix.zig
+        run: pip install ziglang==0.17.1 cargo-zigbuild==0.24.1
       - run: npm run build:native
+        env:
+          TURBOPDF_ZIG_TARGET: ${{ matrix.zig }}
+      - name: Check the glibc it needs
+        if: matrix.zig
+        run: node scripts/check-glibc.mjs native/turbopdf.*.node
       - name: Collect the engine
         shell: bash
         run: mkdir -p artifacts/${{ matrix.target }} && cp native/turbopdf.*.node artifacts/${{ matrix.target }}/turbopdf.node
@@ -214,9 +224,58 @@ jobs:
           cp ../scripts/edge-smoke/*.mjs .
           node run.mjs ./worker.mjs
 
+  # the native engine must load where serverless functions run, not only on the runner's recent glibc
+  smoke-docker:
+    needs: pack
+    name: install on ${{ matrix.image }} (native)
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['amazonlinux:2023', 'public.ecr.aws/lambda/nodejs:22', 'node:22-bullseye']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/smoke-native.mjs
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - name: Install on the runner, render in the image
+        run: |
+          mkdir app && cd app && npm init -y >/dev/null
+          npm install ../packed/turbopdf-[0-9]*.tgz ../packed/turbopdf-engine-linux-x64-gnu-*.tgz --omit=optional
+          cp ../scripts/smoke-native.mjs .
+          # Amazon Linux has no Node: use the runner's (official builds need glibc 2.28)
+          node_dir=$(dirname "$(dirname "$(command -v node)")")
+          docker run --rm --entrypoint /bin/sh -v "$PWD:/app" -v "$node_dir:/opt/node:ro" -w /app '${{ matrix.image }}' \
+            -c 'export PATH="$PATH:/opt/node/bin"; ldd --version | head -1; node smoke-native.mjs'
+
+  # a Next.js app built with `output: "standalone"` must carry the engine with no tracing config, and its
+  # server must render a PDF with the native engine on Amazon Linux 2023, as on Vercel
+  smoke-next:
+    needs: pack
+    name: Next.js standalone on Amazon Linux 2023
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/next-smoke
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - run: node scripts/next-smoke/run.mjs packed
+
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [smoke, smoke-alpine, smoke-bun-deno, smoke-edge]
+    needs: [smoke, smoke-alpine, smoke-bun-deno, smoke-edge, smoke-docker, smoke-next]
     runs-on: ubuntu-latest
     permissions:
       contents: read

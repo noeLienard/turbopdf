@@ -1,26 +1,18 @@
 // The WebAssembly engine for Node, Bun and Deno, used where no native binary exists (and with
 // TURBOPDF_ENGINE=wasm): same Rust code, same bytes out. Renders run in a worker thread (dist/wasm-worker.cjs),
 // so they never block the event loop; without the built worker (tests from source) they run on this thread.
-import { existsSync } from 'node:fs';
 import nodeModule from 'node:module';
-import { join } from 'node:path';
 import type { Worker as WorkerType } from 'node:worker_threads';
 import type { NativeDocument, NativeEngine } from './engine-api';
 import { nodeFiles } from './node-files';
 import { core, type Core, type Handle, inThread } from './wasm-core';
 
-function workerScript(here: string): string | undefined {
-  return [process.env.TURBOPDF_WASM_WORKER, join(here, 'wasm-worker.cjs'), join(here, '..', '..', 'dist', 'wasm-worker.cjs')].find(
-    (p): p is string => Boolean(p) && existsSync(p!),
-  );
-}
-
-export function wasmEngine(wasm: Uint8Array<ArrayBuffer>, here: string): NativeEngine {
+/** `script`: the built worker (dist/wasm-worker.cjs), found by the caller; without it renders run on this thread. */
+export function wasmEngine(wasm: Uint8Array<ArrayBuffer>, script: string | undefined): NativeEngine {
   const module = new WebAssembly.Module(wasm);
   // the sync call (`htmlNodes`, for raw HTML inside Markdown) runs here; it is small and reads no file
   let local: Core | undefined;
   const here_ = () => (local ??= core(module, nodeFiles));
-  const script = workerScript(here);
   if (!script) return inThread(here_());
 
   // loaded at run time, not imported: bundlers (Turbopack, webpack) treat `new Worker(path)` from a static
