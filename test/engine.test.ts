@@ -1,6 +1,6 @@
 // Which engine renders, and why the native one is not used when it fails to load.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -40,7 +40,8 @@ describe('engine', () => {
     await a;
   });
 
-  it('a native engine that fails to load: WebAssembly, with the loader message, and one warning', () => {
+  // the release's native jobs test without the WebAssembly build: nothing to fall back to there
+  it.skipIf(!existsSync(join(root, 'wasm', 'turbopdf.wasm')))('a native engine that fails to load: WebAssembly, with the loader message, and one warning', () => {
     const code = `const pdf = await turbopdf.create('<p>x</p>');
 await turbopdf.create('<p>y</p>');
 console.log(JSON.stringify({ info: engineInfo(), pdf: new TextDecoder().decode(pdf.toBuffer().subarray(0, 5)) }));`;
