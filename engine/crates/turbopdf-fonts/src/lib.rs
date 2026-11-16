@@ -62,7 +62,7 @@ impl Face {
 
 #[derive(Debug, thiserror::Error)]
 pub enum FontError {
-    #[error("font {family:?}: the data is not a valid TrueType/OpenType font")]
+    #[error("font {family:?}: the data is not a valid TrueType, OpenType, WOFF or WOFF2 font")]
     Invalid { family: String },
     #[error("font {family:?}: {reason}")]
     Load { family: String, reason: String },
@@ -107,6 +107,20 @@ pub struct FontDb {
     faces: Vec<Arc<Face>>,
 }
 
+/// WOFF / WOFF2 → the TrueType / OpenType font inside (web font packages such as `@fontsource` mostly ship
+/// WOFF2). Other data is returned as is.
+fn unwrap_web_font(family: &str, data: Vec<u8>) -> Result<Vec<u8>, FontError> {
+    let fail = |e: wuff::WuffErr| FontError::Load {
+        family: family.to_string(),
+        reason: format!("the WOFF data could not be decoded ({e:?})"),
+    };
+    match data.get(..4) {
+        Some(b"wOFF") => wuff::decompress_woff1(&data).map_err(fail),
+        Some(b"wOF2") => wuff::decompress_woff2(&data).map_err(fail),
+        _ => Ok(data),
+    }
+}
+
 impl Default for FontDb {
     fn default() -> Self {
         Self::with_embedded()
@@ -124,7 +138,8 @@ impl FontDb {
         db
     }
 
-    /// Add a font. Later additions win ties over earlier ones with the same key.
+    /// Add a font (TrueType, OpenType, WOFF or WOFF2). Later additions win ties over earlier ones with the
+    /// same key.
     pub fn add(
         &mut self,
         family: &str,
@@ -132,7 +147,7 @@ impl FontDb {
         italic: bool,
         data: Vec<u8>,
     ) -> Result<FaceId, FontError> {
-        let data = Arc::new(data);
+        let data = Arc::new(unwrap_web_font(family, data)?);
         // SAFETY: the slice points into the heap buffer of the `Arc<Vec<u8>>` stored next to the parsed
         // face in the same struct. The buffer is never mutated or moved, and `shaper` is declared before
         // `data`, so it is dropped first. The 'static lifetime never escapes: `shaper()` re-borrows it

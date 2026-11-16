@@ -15,6 +15,8 @@ All notable changes to this project are documented here. The format follows [Kee
   PDF, the PNGs and the HTML preview. The tree gets the matching `textDecoration`, `letterSpacing`,
   `verticalAlign`, `fontVariantNumeric` and `textIndent` fields.
 
+- WOFF and WOFF2 fonts (`fonts` option and `@font-face`), e.g. the files of `@fontsource/*` packages.
+
 ### Changed
 
 - Links, `<u>` / `<ins>` are underlined and `<s>` / `<del>` struck through, as in a browser; `<sup>` / `<sub>`

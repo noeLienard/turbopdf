@@ -16,7 +16,7 @@ export interface ReactElementLike {
 export interface FontSource {
   /** Family name to use in styles, e.g. 'Brand'. */
   family: string;
-  /** Path to a .ttf / .otf file… */
+  /** Path to a .ttf, .otf, .woff or .woff2 file… */
   path?: string;
   /** …or the font bytes. Exactly one of `path` / `data`. */
   data?: Uint8Array;
@@ -49,7 +49,7 @@ interface BaseOptions {
   header?: string;
   /** Same as `header`, at the bottom. Example: `<div style="text-align:center">Page {page} / {pages}</div>` */
   footer?: string;
-  /** Fonts to embed (.ttf / .otf). Inter is built in. HTML can also use `@font-face` with local files. */
+  /** Fonts to embed (.ttf, .otf, .woff, .woff2). Inter is built in. HTML can also use `@font-face` with local files. */
   fonts?: FontSource[];
   /** Text stamped across every page (`'DRAFT'`, `'PAID'`), or `{ text, color, fontSize, fontWeight, angle }`. */
   watermark?: string | Watermark;

@@ -209,7 +209,7 @@ describe('@font-face with local files', () => {
     expect(pdf.warnings).toEqual([]);
   });
 
-  it('web fonts and WOFF2 give a font_failed warning that says what to do', async () => {
+  it('web fonts and missing font files give a font_failed warning that says what to do', async () => {
     const pdf = await turbopdf.create(
       '<style>@font-face{font-family:A;src:url(https://fonts.example/a.woff2) format("woff2")} @font-face{font-family:B;src:url(b.woff2) format("woff2")}</style><p>x</p>',
     );
@@ -218,7 +218,7 @@ describe('@font-face with local files', () => {
       ['font_failed', 'b.woff2'],
     ]);
     expect(pdf.warnings[0]!.message).toMatch(/never downloaded/);
-    expect(pdf.warnings[1]!.message).toMatch(/WOFF/);
+    expect(pdf.warnings[1]!.message).toMatch(/b\.woff2/); // a local WOFF2 is read; this one does not exist
   });
 });
 

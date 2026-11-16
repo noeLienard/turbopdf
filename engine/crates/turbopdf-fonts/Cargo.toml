@@ -10,3 +10,4 @@ turbopdf-tree.workspace = true
 thiserror.workspace = true
 rustybuzz.workspace = true
 base64.workspace = true
+wuff = { version = "0.2.10", default-features = false, features = ["brotli", "z"] }

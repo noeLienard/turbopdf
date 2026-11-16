@@ -14,7 +14,7 @@ This file is for AI coding assistants. It is the whole API in one page. Full gui
 - Relative paths are read from `baseDir` (default: the working directory) and never outside it.
 - JavaScript in the HTML never runs. Render data into the markup first, or use React.
 - Component and tree sizes are in points (1/72 in). CSS lengths are CSS (`px`, `mm`, `em`…).
-- Unsupported: WOFF/WOFF2 and web fonts loaded from a URL (use local TTF/OTF files). `float` works for simple cases (columns, a logo or image with text beside it); prefer Flexbox or Grid for layouts.
+- Fonts: local TTF, OTF, WOFF or WOFF2 files (e.g. from `@fontsource/*`); web fonts are never loaded from a URL. `float` works for simple cases (columns, a logo or image with text beside it); prefer Flexbox or Grid for layouts.
 - Edge runtimes / browsers: `import { init, create } from 'turbopdf/edge'`, `await init(wasm)` once (wasm = `turbopdf/turbopdf.wasm`, its bytes or a URL), then `create()` (React: `init(wasm, { renderToStaticMarkup })` from `react-dom/server`); output with `toUint8Array()` / `toResponse()` (no `save`, no files: fonts as bytes, images as data: URLs).
 - Problems are **returned** in `pdf.warnings`, not thrown. Check them, or pass `strict: true` to throw.
 

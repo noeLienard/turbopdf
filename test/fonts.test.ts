@@ -54,10 +54,41 @@ describe('fonts', () => {
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: '/nope/missing.ttf' }] }))).toBe('font_failed');
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: 'font.exe' }] }))).toBe('invalid_source');
     expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A' }] }))).toBe('invalid_source');
-    expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: 'brand.woff2' }] }))).toBe('invalid_source');
+    expect(await code(turbopdf.create({ html: 'x', fonts: [{ family: 'A', path: 'missing.woff2' }] }))).toBe('font_failed');
     const baseDir = mkdtempSync(join(tmpdir(), 'turbopdf-font-base-'));
     const linked = join(baseDir, 'linked.ttf');
     symlinkSync(FONT_PATH, linked);
     expect(await code(turbopdf.create({ html: 'x', baseDir, fonts: [{ family: 'A', path: linked }] }))).toBe('font_failed');
+  });
+});
+
+describe('WOFF and WOFF2 fonts (@fontsource)', () => {
+  const dir = join(__dirname, 'fixtures', 'pacifico');
+  const woff2 = join(dir, 'pacifico-latin-400-normal.woff2');
+
+  it('`fonts` accepts a .woff2 path and .woff / .woff2 bytes', async () => {
+    for (const font of [
+      { family: 'Script', path: woff2 },
+      { family: 'Script', data: readFileSync(woff2) },
+      { family: 'Script', data: readFileSync(join(dir, 'pacifico-latin-400-normal.woff')) },
+    ]) {
+      const pdf = await turbopdf.create({ html: '<p style="font-family: Script">Bonjour</p>', fonts: [font] });
+      expect(pdfHas(pdf.toBuffer(), 'Pacifico')).toBe(true);
+      expect(pdf.warnings).toEqual([]);
+    }
+  });
+
+  it('@font-face loads local .woff2 / .woff files, as @fontsource CSS declares them', async () => {
+    const css = `@font-face { font-family: 'Pacifico'; font-weight: 400;
+      src: url(./pacifico-latin-400-normal.woff2) format('woff2'), url(./pacifico-latin-400-normal.woff) format('woff'); }
+      p { font-family: 'Pacifico', cursive }`;
+    const pdf = await turbopdf.create({ html: `<style>${css}</style><p>Bonjour</p>`, baseDir: dir });
+    expect(pdfHas(pdf.toBuffer(), 'Pacifico')).toBe(true);
+    expect(pdf.warnings).toEqual([]);
+  });
+
+  it('a corrupt WOFF2 file is a clear error', async () => {
+    const bad = Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(64)]);
+    await expect(turbopdf.create({ html: '<p>x</p>', fonts: [{ family: 'Bad', data: bad }] })).rejects.toThrow(/WOFF data could not be decoded/);
   });
 });
