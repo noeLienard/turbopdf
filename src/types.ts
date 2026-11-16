@@ -143,6 +143,16 @@ export interface Preview extends EdgePreview {
   save(path: string): Promise<void>;
 }
 
+export interface PreviewOptions {
+  /**
+   * Shrink each page to fit its container, as a whole: same lines, same page breaks, same proportions as
+   * the PDF, never a reflow; and never larger than the real page size. Each page is wrapped in a
+   * `<div class="turbopdf-fit">` (full width of its parent). Pure CSS: works inside `dangerouslySetInnerHTML`.
+   * Default `false`: pages keep their real size (and may overflow a narrow screen).
+   */
+  scaleToFit?: boolean;
+}
+
 export interface PreviewPage {
   /** 1-based page number */
   page: number;
@@ -185,7 +195,7 @@ export interface EdgePdf {
   /** A web-standard `Response` with the right headers. Return it from Next.js, Hono, Bun, Deno… */
   toResponse(options?: ResponseOptions): Response;
   /** The document as HTML/CSS (real text, fonts and links), from the same layout as the PDF. */
-  preview(): Promise<EdgePreview>;
+  preview(options?: PreviewOptions): Promise<EdgePreview>;
   /** One PNG image per page, from the same layout as the PDF: thumbnails, emails, image diffs. */
   toPng(options?: PngOptions): Promise<EdgePngPage[]>;
 }
@@ -197,6 +207,6 @@ export interface Pdf extends EdgePdf {
   toBuffer(): Buffer;
   /** A Node stream of the PDF, for `stream.pipe(res)` in Express. */
   toStream(): import('node:stream').Readable;
-  preview(): Promise<Preview>;
+  preview(options?: PreviewOptions): Promise<Preview>;
   toPng(options?: PngOptions): Promise<PngPage[]>;
 }

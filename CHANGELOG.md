@@ -8,6 +8,8 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Added
 
+- `pdf.preview({ scaleToFit: true })`: each page shrinks as a whole to fit its container (same layout as
+  the PDF, never larger than the real size). Pure CSS, works inside `dangerouslySetInnerHTML`.
 - `turbopdf/edge`: the engine in WebAssembly with no Node API, for Cloudflare Workers, Deno Deploy, Netlify
   / Vercel Edge and browsers (`init(wasm)` once, then `create()`). Checked in workerd (Cloudflare's runtime).
   The package exports the engine as `turbopdf/turbopdf.wasm`. It replaces `engine/wasm/turbopdf.mjs`, which

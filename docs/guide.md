@@ -314,7 +314,28 @@ await preview.save('preview.html');
 | `pages[i].width`, `.height` | Page size in points, as in the PDF |
 
 Everything is scoped under `.turbopdf-page`, so it does not leak into your page (and your CSS does not
-reach it). Link targets get ids prefixed with `turbopdf-`. To show pages smaller, use CSS `zoom` on a wrapper.
+reach it). Link targets get ids prefixed with `turbopdf-`.
+
+### Fit the width: `scaleToFit`
+
+By default a page keeps its real size (an A4 page is 794 px wide) and overflows a narrow column or a phone.
+With `scaleToFit: true`, each page shrinks **as a whole** to fit its container, like zooming out: same
+lines, same page breaks, same proportions as the PDF, never a reflow. It never grows past its real size.
+
+```tsx
+const preview = await pdf.preview({ scaleToFit: true });
+
+<style dangerouslySetInnerHTML={{ __html: preview.style }} />
+{preview.pages.map((p) => (
+  <div key={p.page} style={{ width: '100%' }} dangerouslySetInnerHTML={{ __html: p.html }} />
+))}
+```
+
+Each page is wrapped in a `<div class="turbopdf-fit">` that takes the full width of its parent. It is pure
+CSS (container query units, every browser since 2023), so it works inside `dangerouslySetInnerHTML`, with no
+script. The parent must get its width from the layout: in a flex column with `align-items: center`, give
+it `width: 100%`, otherwise it shrinks to nothing.
+
 Fonts are embedded as light WOFF files: the whole font is kept (kerning, ligatures, so the browser places text
 exactly like the engine) but only the glyphs the document uses keep their outlines. A typical page is
 200–300 KB in all, about 60 KB per font face.

@@ -118,3 +118,24 @@ describe('preview(): the document as HTML/CSS', () => {
     expect(await pdf.preview()).toBe(await pdf.preview());
   });
 });
+
+describe('preview({ scaleToFit })', () => {
+  it('scales every length from one variable, capped at the real size, and keeps the default unchanged', async () => {
+    const pdf = await turbopdf.create({ html: '<h1 style="border-bottom:2px solid red">Title</h1><p>Hello <a href="https://example.com">link</a></p>', format: 'A4' });
+    const plain = await pdf.preview();
+    const fit = await pdf.preview({ scaleToFit: true });
+    expect(await pdf.preview({ scaleToFit: true })).toBe(fit); // cached per option
+    expect(plain.pages[0]!.html).not.toContain('turbopdf-fit');
+    expect(plain.style).not.toContain('turbopdf-fit');
+
+    const html = fit.pages[0]!.html;
+    expect(html.startsWith('<div class="turbopdf-fit"><section class="turbopdf-page" style="--u:min(1pt,100cqw / ')).toBe(true);
+    expect(fit.style).toContain('.turbopdf-fit{container-type:inline-size');
+    const styles = [...html.matchAll(/style="([^"]*)"/g)].map((m) => m[1]!);
+    expect(styles.length).toBeGreaterThan(3);
+    for (const css of styles) expect(css.replace('min(1pt,', '')).not.toMatch(/\dpt\b/); // no fixed size left
+    expect(html).toContain('font-size:calc(var(--u)*');
+    expect(html).toContain('Title'); // text untouched
+    expect(fit.toHtml()).toContain('<div class="turbopdf-fit">');
+  });
+});
