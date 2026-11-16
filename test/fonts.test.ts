@@ -92,3 +92,20 @@ describe('WOFF and WOFF2 fonts (@fontsource)', () => {
     await expect(turbopdf.create({ html: '<p>x</p>', fonts: [{ family: 'Bad', data: bad }] })).rejects.toThrow(/WOFF data could not be decoded/);
   });
 });
+
+describe('built-in symbols font', () => {
+  it('draws check boxes, arrows and dingbats Inter lacks, so pdfua passes', async () => {
+    const html = '<p>☐ todo ☑ done ☒ cancelled ✔ paid ✘ refused ✉ ☎ ➜ ⬅ ♠ ✦</p><p><b>bold ✔</b> <i>italic ☑</i></p>';
+    const pdf = await turbopdf.create({ html, title: 'Symbols', lang: 'en', pdfua: true });
+    expect(pdf.warnings).toEqual([]);
+    expect(pdfHas(pdf.toBuffer(), 'NotoSansSymbols2')).toBe(true);
+    // text Inter has stays in Inter: the symbols font is only embedded when used
+    expect(pdfHas((await turbopdf.create('<p>✓ → •</p>')).toBuffer(), 'NotoSansSymbols2')).toBe(false);
+  });
+
+  it('a font of the list still wins over the symbols font', async () => {
+    const pdf = await turbopdf.create({ html: `<p style="font-family: Icons, sans-serif">${FONT_GLYPH} ✔</p>`, fonts: [{ family: 'Icons', path: FONT_PATH }] });
+    expect(pdfHas(pdf.toBuffer(), 'codicon')).toBe(true);
+    expect(pdf.warnings).toEqual([]);
+  });
+});

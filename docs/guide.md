@@ -15,7 +15,7 @@ const pdf = await turbopdf.create('<h1>Invoice</h1>');
 await pdf.save('invoice.pdf');
 ```
 
-That's it. Inter is built in, backgrounds are printed, tables are not cut in the middle of a row, table headers
+That's it. Inter is built in (with a symbols fallback for ☐ ✔ ➜ ✉ …), backgrounds are printed, tables are not cut in the middle of a row, table headers
 repeat. About 20 ms for a 3-page invoice with 200 rows (a headless browser takes 0.7–0.9 s for the same file).
 
 ## Why TurboPDF

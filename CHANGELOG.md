@@ -16,6 +16,8 @@ All notable changes to this project are documented here. The format follows [Kee
   `verticalAlign`, `fontVariantNumeric` and `textIndent` fields.
 - `allowRemote`: origins or URL prefixes that remote images may be downloaded from. The SDK downloads them
   (redirects checked against the list, images only, 20 MB and 10 s each); the engine still never uses the network.
+- Built-in symbols font (a subset of Noto Sans Symbols 2): check boxes, arrows, dingbats and shapes Inter lacks
+  (☐ ☑ ✔ ✘ ✉ ➜ ♠ …) are drawn instead of missing, so `pdfua` no longer fails on them. Color emoji are not included.
 - WOFF and WOFF2 fonts (`fonts` option and `@font-face`), e.g. the files of `@fontsource/*` packages.
 
 ### Changed

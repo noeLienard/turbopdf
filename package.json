@@ -68,6 +68,7 @@
     "README.md",
     "llms.txt",
     "LICENSE",
+    "LICENSE-FONTS.txt",
     "CHANGELOG.md"
   ],
   "engines": {
