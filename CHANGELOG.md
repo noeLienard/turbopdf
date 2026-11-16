@@ -8,6 +8,13 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Added
 
+- CSS borders per side: `border-top` / `-right` / `-bottom` / `-left`, their `-width` / `-style` / `-color`, and
+  `border-width` / `border-style` / `border-color` with one to four values, resolved in declaration order
+  (tree: `borderTop`… next to `border`). Drawn in the PDF, the PNGs and the HTML preview.
+- `font-family` lists: the first loaded family is used and the next ones draw the characters it lacks, before
+  Inter (tree and components accept the same list).
+- CSS `float: left / right` and `clear`, laid out as a row (columns, a logo on the right, an image with text
+  beside it).
 - **Runs everywhere**: prebuilt engines for macOS arm64/x64, Linux x64/arm64 (glibc and musl) and Windows x64,
   installed as optional `@turbopdf/engine-<target>` packages; on any other platform the SDK falls back by itself
   to the same engine compiled to WebAssembly (`wasm/turbopdf.wasm`, run in a worker thread, files read inside

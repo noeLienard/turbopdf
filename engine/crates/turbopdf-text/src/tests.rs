@@ -3,6 +3,7 @@ use super::*;
 fn style(db: &FontDb, size: f32) -> TextStyle {
     TextStyle {
         face: db.select("Inter", 400, false),
+        fallback: None,
         size,
         color: [0, 0, 0, 255],
         line_height: 1.4,

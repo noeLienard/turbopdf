@@ -305,20 +305,24 @@ fn draw_box(h: &mut String, x: f32, y: f32, w: f32, bh: f32, v: &Visual, sides: 
     if v.radius > 0.0 {
         let _ = write!(h, ";border-radius:{}pt", num(v.radius));
     }
-    if let Some(b) = v.border {
+    let spec = |b: &turbopdf_layout::BorderSpec| {
         let style = match b.style {
             BorderStyle::Solid => "solid",
             BorderStyle::Dashed => "dashed",
             BorderStyle::Dotted => "dotted",
         };
-        let spec = format!("{}pt {style} {}", num(b.width), color(b.color));
-        if sides.iter().all(|&s| s) {
-            let _ = write!(h, ";border:{spec}");
-        } else {
-            for (on, side) in sides.iter().zip(["top", "right", "bottom", "left"]) {
-                if *on {
-                    let _ = write!(h, ";border-{side}:{spec}");
-                }
+        format!("{}pt {style} {}", num(b.width), color(b.color))
+    };
+    if let Some(b) = v.outline(sides) {
+        let _ = write!(h, ";border:{}", spec(&b));
+    } else {
+        for (b, side) in v
+            .borders(sides)
+            .iter()
+            .zip(["top", "right", "bottom", "left"])
+        {
+            if let Some(b) = b {
+                let _ = write!(h, ";border-{side}:{}", spec(b));
             }
         }
     }

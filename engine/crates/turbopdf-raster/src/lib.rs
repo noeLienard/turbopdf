@@ -11,7 +11,7 @@ use tiny_skia::{
     StrokeDash, Transform,
 };
 use turbopdf_fonts::{FaceId, FontDb};
-use turbopdf_layout::{DrawOp, ImageKind, Layout, Visual};
+use turbopdf_layout::{BorderSpec, DrawOp, ImageKind, Layout, Visual, border_bar};
 use turbopdf_tree::{BorderStyle, ObjectFit};
 
 #[derive(Debug, thiserror::Error)]
@@ -191,9 +191,8 @@ fn draw_box(
     {
         pm.fill_path(&p, &paint(bg), FillRule::Winding, ts, None);
     }
-    let Some(b) = v.border else { return };
-    let bw = b.width;
-    if sides.iter().all(|&d| d) {
+    if let Some(b) = v.outline(sides) {
+        let bw = b.width;
         if let Some(p) = rect_path(
             x + bw / 2.0,
             y + bw / 2.0,
@@ -201,31 +200,46 @@ fn draw_box(
             h - bw,
             (v.radius - bw / 2.0).max(0.0),
         ) {
-            let mut stroke = Stroke {
-                width: bw,
-                ..Default::default()
-            };
-            stroke.dash = match b.style {
-                BorderStyle::Solid => None,
-                BorderStyle::Dashed => StrokeDash::new(vec![bw * 3.0, bw * 2.0], 0.0),
-                BorderStyle::Dotted => StrokeDash::new(vec![bw, bw * 1.5], 0.0),
-            };
-            pm.stroke_path(&p, &paint(b.color), &stroke, ts, None);
+            pm.stroke_path(&p, &paint(b.color), &stroke_of(&b), ts, None);
         }
         return;
     }
-    // partial borders (a box cut by a page break): filled bars
-    let bars = [
-        (sides[0], x, y, w, bw),
-        (sides[1], x + w - bw, y, bw, h),
-        (sides[2], x, y + h - bw, w, bw),
-        (sides[3], x, y, bw, h),
-    ];
-    for (on, bx, by, bwid, bh) in bars {
-        if on && let Some(p) = rect_path(bx, by, bwid, bh, 0.0) {
-            pm.fill_path(&p, &paint(b.color), FillRule::Winding, ts, None);
+    // sides that differ, or a box cut by a page break: one bar per side, each with its own style
+    for (side, b) in v.borders(sides).into_iter().enumerate() {
+        let Some(b) = b else { continue };
+        let (bx, by, bw, bh) = border_bar(side, x, y, w, h, b.width);
+        if b.style == BorderStyle::Solid {
+            if let Some(p) = rect_path(bx, by, bw, bh, 0.0) {
+                pm.fill_path(&p, &paint(b.color), FillRule::Winding, ts, None);
+            }
+        } else {
+            let mut pb = PathBuilder::new();
+            if matches!(side, 0 | 2) {
+                pb.move_to(bx, by + bh / 2.0);
+                pb.line_to(bx + bw, by + bh / 2.0);
+            } else {
+                pb.move_to(bx + bw / 2.0, by);
+                pb.line_to(bx + bw / 2.0, by + bh);
+            }
+            if let Some(p) = pb.finish() {
+                pm.stroke_path(&p, &paint(b.color), &stroke_of(&b), ts, None);
+            }
         }
     }
+}
+
+fn stroke_of(b: &BorderSpec) -> Stroke {
+    let bw = b.width;
+    let mut stroke = Stroke {
+        width: bw,
+        ..Default::default()
+    };
+    stroke.dash = match b.style {
+        BorderStyle::Solid => None,
+        BorderStyle::Dashed => StrokeDash::new(vec![bw * 3.0, bw * 2.0], 0.0),
+        BorderStyle::Dotted => StrokeDash::new(vec![bw, bw * 1.5], 0.0),
+    };
+    stroke
 }
 
 fn draw_run(

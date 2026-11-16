@@ -1,4 +1,5 @@
-//! Shaping with rustybuzz: one face, then fallback to Inter for missing glyphs; words and plans cached.
+//! Shaping with rustybuzz: one face, then the next family of the list and Inter for missing glyphs;
+//! words and plans cached.
 
 use super::*;
 
@@ -95,26 +96,25 @@ pub(crate) fn shape_with_fallback(
     text: &str,
     missing: &mut Vec<MissingGlyph>,
 ) -> Vec<Run> {
-    let primary = db.face(style.face).shaper();
-    let fb_id = fallback_face(db, style.face);
-    let fb = if fb_id != style.face {
-        Some(db.face(fb_id).shaper())
-    } else {
-        None
-    };
+    // the face, the next family of the list, then Inter
+    let mut chain = vec![style.face];
+    for id in [style.fallback, Some(fallback_face(db, style.face))]
+        .into_iter()
+        .flatten()
+    {
+        if !chain.contains(&id) {
+            chain.push(id);
+        }
+    }
+    let shapers: Vec<_> = chain.iter().map(|&id| db.face(id).shaper()).collect();
     let covers = |face: &turbopdf_fonts::ShapeFace<'_>, c: char| {
         c.is_control() || face.glyph_index(c).is_some()
     };
 
     let mut chunks: Vec<(FaceId, String)> = Vec::new();
     for c in text.chars() {
-        let id = if covers(primary, c) {
-            style.face
-        } else if fb.is_some_and(|f| covers(f, c)) {
-            fb_id
-        } else {
-            style.face // nobody has it: primary draws .notdef and we report it
-        };
+        // nobody has it: the first face draws .notdef and we report it
+        let id = chain[shapers.iter().position(|f| covers(f, c)).unwrap_or(0)];
         match chunks.last_mut() {
             Some((last, s)) if *last == id => s.push(c),
             _ => chunks.push((id, c.to_string())),

@@ -18,6 +18,8 @@ pub type Rgba = [u8; 4];
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TextStyle {
     pub face: FaceId,
+    /// Next family of the `font-family` list, for characters `face` does not have (then Inter).
+    pub fallback: Option<FaceId>,
     /// Points.
     pub size: f32,
     pub color: Rgba,

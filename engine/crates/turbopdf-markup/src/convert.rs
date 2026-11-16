@@ -20,6 +20,7 @@ use turbopdf_tree::{
     Node, PageBreak, QrEcc, Role, Row, Span, Style, Table, TextAlign, TextContent, TextStyle, View,
 };
 
+mod float;
 mod table;
 
 const INLINE: &[&str] = &[
@@ -392,10 +393,22 @@ impl<'a> Converter<'a> {
                 inline.clear();
             }
         };
-        for &c in children {
+        let mut i = 0;
+        while i < children.len() {
+            let c = children[i];
             if !self.is_content(c) {
+                i += 1;
                 continue;
             }
+            // a float (even an inline one, like `<img style="float:right">`) is a block
+            if !self.hidden(c) && self.float_of(c).is_some() {
+                flush(self, &mut inline, &mut out);
+                let (row, next) = self.float_row(children, i);
+                out.push(row);
+                i = next;
+                continue;
+            }
+            i += 1;
             if self.is_inline(c) {
                 inline.push(c);
                 continue;

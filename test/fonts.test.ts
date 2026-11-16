@@ -26,6 +26,21 @@ describe('fonts', () => {
     expect(pdf.warnings).toEqual([]);
   });
 
+  it('font-family lists: the first loaded family, then the next ones for missing characters', async () => {
+    const fonts = [{ family: 'Icons', path: FONT_PATH }];
+    // `Missing` is not loaded: `Icons` is the first family of the list that is
+    const first = await turbopdf.create({ html: `<p style="font-family:'Missing', Icons, sans-serif">${FONT_GLYPH}</p>`, fonts });
+    expect(pdfHas(first.toBuffer(), 'codicon')).toBe(true);
+    expect(first.warnings).toEqual([]);
+    // Inter first: the icon is not in Inter, so it comes from the next family instead of a missing glyph
+    const next = await turbopdf.create({ html: `<p style="font-family: Inter, Icons">Total ${FONT_GLYPH}</p>`, fonts });
+    expect(pdfHas(next.toBuffer(), 'codicon')).toBe(true);
+    expect(next.warnings.filter((w) => w.type === 'missing_glyph')).toEqual([]);
+    // without the list, the same text reports the missing glyph
+    const alone = await turbopdf.create({ html: `<p style="font-family: Inter">Total ${FONT_GLYPH}</p>`, fonts });
+    expect(alone.warnings.map((w) => w.type)).toContain('missing_glyph');
+  });
+
   it('`fonts` accepts raw bytes', async () => {
     const pdf = await turbopdf.create({
       html: `<p style="font-family:Bytes;font-size:30px">${FONT_GLYPH}</p>`,

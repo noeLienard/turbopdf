@@ -2,10 +2,11 @@
 //! fonts. Unknown properties are ignored. Lengths are converted to points (1 CSS px = 0.75 pt).
 
 use turbopdf_tree::{
-    AlignItems, Border, BorderStyle, Color, Dimension, EdgeSides, Edges, FlexDirection, FlexWrap,
-    FontStyle, JustifyContent, LayoutMode, Position, Style, TextAlign, TextStyle,
+    AlignItems, Color, Dimension, EdgeSides, Edges, FlexDirection, FlexWrap, FontStyle,
+    JustifyContent, LayoutMode, Position, Style, TextAlign, TextStyle,
 };
 
+mod border;
 mod length;
 pub use length::css_length;
 use length::*;
@@ -284,33 +285,6 @@ fn set_side(e: Option<Edges>, side: &str, v: f32) -> Edges {
     Edges::Sides(s)
 }
 
-fn border(value: &str, font_size: f32) -> Option<Border> {
-    let v = value.trim();
-    if v == "none" || v == "0" {
-        return None;
-    }
-    let mut b = Border {
-        width: 0.75,
-        color: Color::BLACK,
-        style: Some(BorderStyle::Solid),
-    };
-    for t in tokens(v) {
-        match t {
-            "solid" => b.style = Some(BorderStyle::Solid),
-            "dashed" => b.style = Some(BorderStyle::Dashed),
-            "dotted" => b.style = Some(BorderStyle::Dotted),
-            _ => {
-                if let Some(w) = css_length(t, font_size) {
-                    b.width = w;
-                } else if let Some(c) = css_color(t) {
-                    b.color = c;
-                }
-            }
-        }
-    }
-    Some(b)
-}
-
 fn align(v: &str) -> Option<AlignItems> {
     Some(match v {
         "flex-start" | "start" => AlignItems::FlexStart,
@@ -369,8 +343,12 @@ pub fn parse_style(decls: &[Decl], inherited_font_size: f32) -> Style {
     let fs = font_size;
     let mut flex_display = false;
 
+    let mut borders = border::Borders::default();
     for (k, v) in decls {
         let v = v.as_str();
+        if borders.apply(k, v, fs) {
+            continue;
+        }
         match k.as_str() {
             "display" => {
                 flex_display = matches!(v, "flex" | "inline-flex");
@@ -499,17 +477,6 @@ pub fn parse_style(decls: &[Decl], inherited_font_size: f32) -> Style {
                 };
                 s.margin = Some(set_side(s.margin, &k[7..], n));
             }
-            "border" => s.border = border(v, fs),
-            "border-color" => {
-                if let (Some(b), Some(c)) = (&mut s.border, css_color(v)) {
-                    b.color = c;
-                }
-            }
-            "border-width" => {
-                if let (Some(b), Some(w)) = (&mut s.border, css_length(v, fs)) {
-                    b.width = w;
-                }
-            }
             "border-radius" => {
                 if let Some(n) = tokens(v).first().and_then(|x| css_length(x, fs)) {
                     s.border_radius = Some(n.max(0.0));
@@ -523,14 +490,14 @@ pub fn parse_style(decls: &[Decl], inherited_font_size: f32) -> Style {
             }
             "color" => s.color = css_color(v).or(s.color),
             "font-family" => {
-                let first = v.split(',').next().unwrap_or("").trim();
-                let first = first
-                    .strip_prefix(['"', '\''])
-                    .unwrap_or(first)
-                    .strip_suffix(['"', '\''])
-                    .unwrap_or(first.strip_prefix(['"', '\'']).unwrap_or(first));
-                if !first.is_empty() {
-                    s.font_family = Some(first.to_string());
+                // the whole list: the engine uses the first loaded family, the next ones for missing characters
+                let list: Vec<&str> = v
+                    .split(',')
+                    .map(|f| f.trim().trim_matches(['"', '\'']).trim())
+                    .filter(|f| !f.is_empty())
+                    .collect();
+                if !list.is_empty() {
+                    s.font_family = Some(list.join(", "));
                 }
             }
             "font-size" => s.font_size = Some(font_size),
@@ -567,6 +534,7 @@ pub fn parse_style(decls: &[Decl], inherited_font_size: f32) -> Style {
     if flex_display && s.flex_direction.is_none() {
         s.flex_direction = Some(FlexDirection::Row);
     }
+    borders.write(&mut s);
     s
 }
 
@@ -607,7 +575,7 @@ macro_rules! merge_fields {
 
 /// `over` on top of `base`: every field set in `over` wins.
 pub fn merge(base: &Style, over: &Style) -> Style {
-    merge_fields!(
+    let mut s = merge_fields!(
         base,
         over,
         display,
@@ -640,6 +608,10 @@ pub fn merge(base: &Style, over: &Style) -> Style {
         padding,
         margin,
         border,
+        border_top,
+        border_right,
+        border_bottom,
+        border_left,
         border_radius,
         background_color,
         font_family,
@@ -649,7 +621,9 @@ pub fn merge(base: &Style, over: &Style) -> Style {
         color,
         text_align,
         line_height,
-    )
+    );
+    s.reset_sides_from(over);
+    s
 }
 
 pub fn is_empty(s: &Style) -> bool {
@@ -691,6 +665,56 @@ mod tests {
             json("background: rgba(255, 0, 0, 0.5); font-weight: bold; flex: 1"),
             serde_json::json!({ "backgroundColor": "#ff000080", "fontWeight": 700, "flexGrow": 1.0 })
         );
+    }
+
+    #[test]
+    fn borders_side_by_side_in_declaration_order() {
+        // one side
+        assert_eq!(
+            json("border-bottom: 1px dashed #ddd"),
+            serde_json::json!({ "borderBottom": { "width": 0.75, "color": "#dddddd", "style": "dashed" } })
+        );
+        // four equal sides collapse into `border`; a style alone is `medium`
+        assert_eq!(
+            json("border-style: solid; border-color: red"),
+            serde_json::json!({ "border": { "width": 2.25, "color": "#ff0000", "style": "solid" } })
+        );
+        // shorthand, then one side removed
+        let s = style("border: 2px solid #000; border-left: none");
+        assert_eq!(s.border, None);
+        assert_eq!(s.border_top.map(|b| b.width), Some(1.5));
+        assert_eq!(s.border_left.map(|b| b.width), Some(0.0));
+        // one to four values: top right bottom left
+        let s = style("border-style: solid; border-width: 1px 2px 3px");
+        assert_eq!(
+            s.borders().map(|b| b.map(|b| b.width)),
+            [Some(0.75), Some(1.5), Some(2.25), Some(1.5)]
+        );
+        // a later shorthand resets an earlier side
+        assert_eq!(
+            json("border-top: 4px dotted blue; border: 1px solid black"),
+            serde_json::json!({ "border": { "width": 0.75, "color": "#000000", "style": "solid" } })
+        );
+        // a width with no style draws nothing
+        assert_eq!(json("border-width: 2px"), serde_json::json!({}));
+        // not borders
+        assert_eq!(
+            json("border-radius: 4px"),
+            serde_json::json!({ "borderRadius": 3.0 })
+        );
+    }
+
+    #[test]
+    fn a_border_shorthand_replaces_the_sides_it_cascades_over() {
+        let base = style("border-bottom: 3px solid red");
+        let over = style("border: 1px solid black");
+        let m = merge(&base, &over);
+        assert_eq!(m.border_bottom, None);
+        assert_eq!(m.borders()[2].map(|b| b.width), Some(0.75));
+        // and a side cascades over a shorthand
+        let m = merge(&over, &base);
+        assert_eq!(m.borders()[2].map(|b| b.width), Some(2.25));
+        assert_eq!(m.borders()[0].map(|b| b.width), Some(0.75));
     }
 
     #[test]

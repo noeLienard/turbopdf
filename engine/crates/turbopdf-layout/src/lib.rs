@@ -45,13 +45,35 @@ pub struct BorderSpec {
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Visual {
     pub background: Option<Rgba>,
-    pub border: Option<BorderSpec>,
+    /// `[top, right, bottom, left]`.
+    pub border: [Option<BorderSpec>; 4],
     pub radius: f32,
 }
 
 impl Visual {
     pub fn is_empty(&self) -> bool {
-        self.background.is_none() && self.border.is_none()
+        self.background.is_none() && self.border.iter().all(Option::is_none)
+    }
+
+    /// The borders to draw: the box's own, minus the sides a page break cut off (`sides`).
+    pub fn borders(&self, sides: [bool; 4]) -> [Option<BorderSpec>; 4] {
+        std::array::from_fn(|i| self.border[i].filter(|_| sides[i]))
+    }
+
+    /// The single border of a box whose four drawn sides are the same: drawn as one outline.
+    pub fn outline(&self, sides: [bool; 4]) -> Option<BorderSpec> {
+        let b = self.borders(sides);
+        b[0].filter(|first| b.iter().all(|x| x.as_ref() == Some(first)))
+    }
+}
+
+/// A border side as a bar `(x, y, w, h)` inside the box `x, y, w, h` (top, right, bottom, left).
+pub fn border_bar(side: usize, x: f32, y: f32, w: f32, h: f32, width: f32) -> (f32, f32, f32, f32) {
+    match side {
+        0 => (x, y, w, width),
+        1 => (x + w - width, y, width, h),
+        2 => (x, y + h - width, w, width),
+        _ => (x, y, width, h),
     }
 }
 
