@@ -234,5 +234,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          for t in packed/turbopdf-engine-*.tgz; do npm publish "$t" --access public --provenance; done
-          npm publish packed/turbopdf-[0-9]*.tgz --access public --provenance
+          for t in ./packed/turbopdf-engine-*.tgz; do npm publish "$t" --access public --provenance; done
+          npm publish ./packed/turbopdf-[0-9]*.tgz --access public --provenance
