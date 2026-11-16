@@ -8,6 +8,12 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Added
 
+- **Runs everywhere**: prebuilt engines for macOS arm64/x64, Linux x64/arm64 (glibc and musl) and Windows x64,
+  installed as optional `@turbopdf/engine-<target>` packages; on any other platform the SDK falls back by itself
+  to the same engine compiled to WebAssembly (`wasm/turbopdf.wasm`, run in a worker thread, files read inside
+  `baseDir`). Native and WebAssembly give byte-identical PDFs, PNGs and previews. `TURBOPDF_ENGINE=native|wasm`
+  forces one. `npm run build:wasm`, `npm run test:wasm`; a release workflow builds, installs and smoke-tests
+  each package on its own OS (and on Bun and Deno).
 - **Rust engine** (`engine/`): document tree → PDF and PNG previews, no browser, no network, no JavaScript.
   taffy (flexbox), rustybuzz (shaping), hypher (hyphenation), krilla (PDF, subsetted fonts), tiny-skia (PNG).
   A 3-page invoice with a 200-row table renders in ~17.5 ms (Chromium, before: ~730 ms warm). Same input →

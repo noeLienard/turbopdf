@@ -1,8 +1,9 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TurboPdfError } from '../errors';
+import { wasmEngine } from './wasm';
 
 /** A document laid out by the engine: PNGs and the HTML preview are drawn from the same layout. */
 export interface NativeDocument {
@@ -39,20 +40,52 @@ function candidates(): string[] {
   ].filter((p): p is string => Boolean(p));
 }
 
+/** The prebuilt package for this machine: `linux-x64-gnu`, `linux-x64-musl` (Alpine), `darwin-arm64`, `win32-x64-msvc`… */
+export function platformTarget(): string {
+  const base = `${process.platform}-${process.arch}`;
+  if (process.platform === 'win32') return `${base}-msvc`;
+  if (process.platform !== 'linux') return base;
+  const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } } | undefined;
+  return `${base}-${report?.header?.glibcVersionRuntime ? 'gnu' : 'musl'}`;
+}
+
+/** The folder with `engine.cjs` and `turbopdf.wasm`. */
+function wasmDir(): string | undefined {
+  return [
+    process.env.TURBOPDF_WASM_DIR,
+    join(here, '..', 'wasm'), // dist/index.js → wasm/
+    join(here, '..', '..', 'wasm'), // src/rust/native.ts → wasm/ (tests)
+  ].find((d): d is string => Boolean(d) && existsSync(join(d!, 'turbopdf.wasm')) && existsSync(join(d!, 'engine.cjs')));
+}
+
+function loadWasm(): NativeEngine | undefined {
+  const dir = wasmDir();
+  return dir ? wasmEngine(dir, readFileSync(join(dir, 'turbopdf.wasm'))) : undefined;
+}
+
+/** The fastest engine available: a native binary for this platform, else the WebAssembly build. */
 export function loadNative(): NativeEngine {
   if (cached) return cached;
-  const require = createRequire(join(here, 'noop.js'));
-  for (const path of candidates()) {
-    if (existsSync(path)) return (cached = require(path) as NativeEngine);
+  const mode = process.env.TURBOPDF_ENGINE; // `native` | `wasm` | unset (native, then wasm)
+  if (mode !== 'wasm') {
+    const require = createRequire(join(here, 'noop.js'));
+    for (const path of candidates()) {
+      if (existsSync(path)) return (cached = require(path) as NativeEngine);
+    }
+    try {
+      return (cached = require(`@turbopdf/engine-${platformTarget()}`) as NativeEngine);
+    } catch {
+      // no native binary for this platform: fall back to WebAssembly below
+    }
   }
-  try {
-    return (cached = require(`@turbopdf/engine-${process.platform}-${process.arch}`) as NativeEngine);
-  } catch {
-    throw new TurboPdfError(
-      'engine_unavailable',
-      `The Rust engine is not available for ${process.platform}-${process.arch}. Build it with \`npm run build:native\` (needs Rust).`,
-    );
-  }
+  const wasm = mode === 'native' ? undefined : loadWasm();
+  if (wasm) return (cached = wasm);
+  throw new TurboPdfError(
+    'engine_unavailable',
+    mode === 'native'
+      ? `No native engine for ${process.platform}-${process.arch}. Unset TURBOPDF_ENGINE to use the WebAssembly build, or build it with \`npm run build:native\` (needs Rust).`
+      : `The TurboPDF engine is missing (no native binary for ${process.platform}-${process.arch}, no wasm/turbopdf.wasm). Reinstall turbopdf, or build it with \`npm run build:native\` (needs Rust).`,
+  );
 }
 
 /** Errors thrown by the native module carry a JSON message `{ code, message, details? }`. */

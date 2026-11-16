@@ -376,7 +376,19 @@ await turbopdf.warmup(); // optional: load the engine before the first request
 
 - Renders run on Node's thread pool, never on the main thread. `concurrency` (default 4) caps how many run at once; the others wait in line.
 - No process to manage: `close()` is kept for compatibility and does nothing.
-- The engine is a native module (`turbopdf.<platform>-<arch>.node`), also available as WebAssembly (see `engine/README.md`).
+- The engine is a native module, prebuilt for macOS (arm64, x64), Linux (x64, arm64, glibc and musl/Alpine) and
+  Windows x64; npm installs only the one for your machine. Anywhere else (another CPU, Windows on Arm, a missing
+  binary) TurboPDF uses the **same engine compiled to WebAssembly**, automatically: same bytes out, 1.3–2× slower,
+  still in a worker thread. `TURBOPDF_ENGINE=wasm` forces it, `TURBOPDF_ENGINE=native` refuses it.
+
+### Where it runs
+
+| | |
+|---|---|
+| Node.js 20+, Bun, Deno | ✅ any OS, any CPU (native, or WebAssembly) |
+| Serverless (AWS Lambda, Vercel / Netlify functions, Cloud Run) | ✅ Linux x64 / arm64 binaries |
+| Docker, including Alpine | ✅ glibc and musl binaries |
+| Edge runtimes (Cloudflare Workers, Vercel Edge) | ❌ not yet: they need a WebAssembly build without `node:` APIs |
 
 ## Security
 
@@ -395,7 +407,7 @@ TurboPDF throws a `TurboPdfError` whose `message` says what to do.
 | `invalid_tree` | The document tree is invalid (`details` lists every problem with its path) |
 | `font_failed` | A font file could not be loaded or parsed |
 | `not_accessible` | `pdfua` is on and the document cannot conform (`details` lists the problems) |
-| `engine_unavailable` | No native engine for this platform |
+| `engine_unavailable` | The engine files are missing from the install (neither a native binary nor `wasm/turbopdf.wasm`) |
 | `react_not_installed` | A React element was passed but `react` / `react-dom` are not installed |
 | `warnings_found` | `strict` is on and the render produced warnings |
 | `aborted` | The `signal` was aborted |
@@ -412,7 +424,7 @@ try {
 
 ## Requirements
 
-Node.js 20 or later. React is optional: install `react` and `react-dom` only if you pass React elements.
+Node.js 20 or later, Bun or Deno, on any OS. React is optional: install `react` and `react-dom` only if you pass React elements.
 
 ## License
 

@@ -1,0 +1,216 @@
+name: Release
+
+# Builds the engine for every platform, checks each build on its own OS by installing the packed
+# package in an empty folder, then (on a v* tag) publishes the platform packages and turbopdf.
+# Publishing needs the NPM_TOKEN secret.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: engine ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: darwin-arm64, os: macos-14, rust: aarch64-apple-darwin }
+          - { target: darwin-x64, os: macos-15-intel, rust: x86_64-apple-darwin }
+          - { target: linux-x64-gnu, os: ubuntu-22.04, rust: x86_64-unknown-linux-gnu }
+          - { target: linux-arm64-gnu, os: ubuntu-22.04-arm, rust: aarch64-unknown-linux-gnu }
+          - { target: win32-x64-msvc, os: windows-latest, rust: x86_64-pc-windows-msvc }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build:native
+      - name: Collect the engine
+        shell: bash
+        run: mkdir -p artifacts/${{ matrix.target }} && cp native/turbopdf.*.node artifacts/${{ matrix.target }}/turbopdf.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-${{ matrix.target }}
+          path: artifacts/${{ matrix.target }}/turbopdf.node
+      - run: npm test
+
+  musl:
+    name: engine linux-x64-musl
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    container: node:20-alpine
+    steps:
+      - run: apk add --no-cache bash curl build-base git
+      - uses: actions/checkout@v5
+      - name: Install Rust
+        shell: bash
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: npm ci
+      # a Node addon on musl must link the C runtime dynamically, like Node itself
+      - run: RUSTFLAGS="-C target-feature=-crt-static" npm run build:native
+      - run: mkdir -p artifacts/linux-x64-musl && cp native/turbopdf.*.node artifacts/linux-x64-musl/turbopdf.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-linux-x64-musl
+          path: artifacts/linux-x64-musl/turbopdf.node
+      - run: npm test
+
+  wasm:
+    name: engine wasm32
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build:wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-wasm
+          path: wasm/turbopdf.wasm
+
+  pack:
+    needs: [native, musl, wasm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm ci
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: engine-*
+          path: artifacts
+      - name: Lay out the packages
+        run: |
+          mv artifacts/engine-wasm/turbopdf.wasm wasm/turbopdf.wasm
+          for d in artifacts/engine-*; do mv "$d" "artifacts/${d#artifacts/engine-}"; done
+          node scripts/package-platforms.mjs artifacts
+      - run: npm run build
+      - name: Pack
+        run: |
+          mkdir -p packed
+          npm pack --pack-destination packed
+          for d in npm/*/; do npm pack "./$d" --pack-destination packed; done
+          ls -la packed
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packed
+          path: packed
+
+  # install the packed packages in an empty folder, as a user would, on each OS
+  smoke:
+    needs: pack
+    name: install on ${{ matrix.os }} (${{ matrix.engine }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, engine: native, target: linux-x64-gnu }
+          - { os: ubuntu-22.04-arm, engine: native, target: linux-arm64-gnu }
+          - { os: macos-14, engine: native, target: darwin-arm64 }
+          - { os: macos-15-intel, engine: native, target: darwin-x64 }
+          - { os: windows-latest, engine: native, target: win32-x64-msvc }
+          # no prebuilt binary for Windows on Arm: the package must fall back to WebAssembly by itself
+          - { os: windows-11-arm, engine: auto, target: '' }
+          - { os: ubuntu-22.04, engine: wasm, target: '' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/smoke.mjs
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - name: Install and render
+        shell: bash
+        run: |
+          mkdir app && cd app && npm init -y >/dev/null
+          main=$(ls ../packed/turbopdf-[0-9]*.tgz)
+          if [ -n "${{ matrix.target }}" ]; then
+            npm install "$main" ../packed/turbopdf-engine-${{ matrix.target }}-*.tgz --omit=optional
+          else
+            npm install "$main" --omit=optional
+          fi
+          if [ "${{ matrix.engine }}" != auto ]; then export TURBOPDF_ENGINE=${{ matrix.engine }}; fi
+          node ../scripts/smoke.mjs
+
+  smoke-alpine:
+    needs: pack
+    name: install on alpine (native)
+    runs-on: ubuntu-latest
+    container: node:20-alpine
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/smoke.mjs
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - run: |
+          mkdir app && cd app && npm init -y >/dev/null
+          npm install ../packed/turbopdf-[0-9]*.tgz ../packed/turbopdf-engine-linux-x64-musl-*.tgz --omit=optional
+          TURBOPDF_ENGINE=native node ../scripts/smoke.mjs
+
+  smoke-bun-deno:
+    needs: pack
+    name: install on Bun and Deno (wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/smoke.mjs
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - uses: oven-sh/setup-bun@v2
+      - uses: denoland/setup-deno@v2
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - run: |
+          mkdir app && cd app && npm init -y >/dev/null
+          npm install ../packed/turbopdf-[0-9]*.tgz --omit=optional
+          TURBOPDF_ENGINE=wasm bun ../scripts/smoke.mjs
+          TURBOPDF_ENGINE=wasm deno run -A ../scripts/smoke.mjs
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [smoke, smoke-alpine, smoke-bun-deno]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v5
+        with:
+          name: packed
+          path: packed
+      - name: Publish the platform packages, then turbopdf
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for t in packed/turbopdf-engine-*.tgz; do npm publish "$t" --access public --provenance; done
+          npm publish packed/turbopdf-[0-9]*.tgz --access public --provenance

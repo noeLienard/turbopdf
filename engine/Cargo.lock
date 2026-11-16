@@ -1375,8 +1375,10 @@ dependencies = [
 name = "turbopdf-wasm"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "serde_json",
  "turbopdf-engine",
+ "turbopdf-markup",
 ]
 
 [[package]]

@@ -194,6 +194,10 @@ export async function GET() {
 With **Express**, stream it: `pdf.toStream().pipe(res)`. Renders run on Node's thread pool and never block
 your event loop.
 
+It runs on **macOS, Linux (glibc and Alpine), Windows, Lambda, Vercel, Docker, Bun and Deno**: prebuilt native
+binaries, and the same engine in WebAssembly anywhere else, with the same output bytes.
+[Where it runs](docs/guide.md#where-it-runs).
+
 ## Documentation
 
 📖 **[The full guide](docs/guide.md)**: every option, supported HTML and CSS, Markdown, components, QR codes,

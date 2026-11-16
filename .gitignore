@@ -4,3 +4,7 @@ dist
 examples/out
 native/
 .scratch/
+wasm/*.wasm
+artifacts/
+npm/
+packed/
