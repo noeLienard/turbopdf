@@ -195,8 +195,8 @@ With **Express**, stream it: `pdf.toStream().pipe(res)`. Renders run on Node's t
 your event loop.
 
 It runs on **macOS, Linux (glibc and Alpine), Windows, Lambda, Vercel, Docker, Bun and Deno**: prebuilt native
-binaries, and the same engine in WebAssembly anywhere else, with the same output bytes.
-[Where it runs](docs/guide.md#where-it-runs).
+binaries, and the same engine in WebAssembly anywhere else, with the same output bytes. On **Cloudflare
+Workers, Deno Deploy or in the browser**, use `turbopdf/edge`. [Where it runs](docs/guide.md#where-it-runs).
 
 ## Documentation
 

@@ -13,6 +13,23 @@ export default defineConfig([
     footer: ({ format }) => (format === 'cjs' ? { js: 'if (module.exports.default) module.exports = Object.assign(module.exports.default, module.exports);' } : {}),
   },
   {
+    // edge runtimes and browsers: no Node API in this bundle
+    entry: { edge: 'src/edge.ts' },
+    format: ['esm', 'cjs'],
+    dts: true,
+    platform: 'neutral',
+    target: 'es2022',
+    external: ['react', 'react-dom', 'react-dom/server', 'markdown-it'],
+  },
+  {
+    // the worker thread that runs the WebAssembly engine in Node, Bun and Deno
+    entry: { 'wasm-worker': 'src/rust/wasm-worker.ts' },
+    format: ['cjs'],
+    outExtension: () => ({ js: '.cjs' }),
+    platform: 'node',
+    target: 'node20',
+  },
+  {
     entry: { cli: 'src/cli/dev.ts' },
     format: ['esm'],
     target: 'node18',

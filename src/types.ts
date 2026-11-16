@@ -124,7 +124,7 @@ export interface ConfigureOptions {
  * working links (internal ones jump to their target), images, backgrounds and borders. Same layout as the
  * PDF, whatever the source (HTML, Markdown, React or tree).
  */
-export interface Preview {
+export interface EdgePreview {
   /**
    * CSS shared by every page: base rules, the fonts used (`@font-face`, embedded) and the images.
    * Put it once in the page that shows the preview, e.g. `<style>{preview.style}</style>`.
@@ -136,6 +136,9 @@ export interface Preview {
   toHtml(): string;
   /** A web-standard `Response` holding {@link toHtml}. */
   toResponse(init?: ResponseInit): Response;
+}
+
+export interface Preview extends EdgePreview {
   /** Write {@link toHtml} to disk. Missing folders are created. */
   save(path: string): Promise<void>;
 }
@@ -151,36 +154,49 @@ export interface PreviewPage {
   html: string;
 }
 
-export interface PngPage {
+export interface EdgePngPage {
   /** 1-based page number */
   page: number;
   /** Image width in px */
   width: number;
   /** Image height in px */
   height: number;
-  /** Write the PNG to disk. Missing folders are created. */
-  save(path: string): Promise<void>;
   /** The PNG bytes. */
-  toBuffer(): Buffer;
+  toUint8Array(): Uint8Array;
   /** `data:image/png;base64,…`, ready for `<img src>`. */
   toDataUrl(): string;
 }
 
-export interface Pdf {
+export interface PngPage extends EdgePngPage {
+  /** Write the PNG to disk. Missing folders are created. */
+  save(path: string): Promise<void>;
+  /** The PNG bytes, as a Node `Buffer`. */
+  toBuffer(): Buffer;
+}
+
+/** A PDF made by `turbopdf/edge`: everything but the Node-only file and stream helpers. */
+export interface EdgePdf {
   /** Number of pages */
   readonly pages: number;
   /** Problems detected while rendering. Never throws. */
   readonly warnings: Warning[];
-  /** Write the PDF to disk. Missing folders are created. */
-  save(path: string): Promise<void>;
   /** The PDF bytes. */
-  toBuffer(): Buffer;
+  toUint8Array(): Uint8Array;
   /** A web-standard `Response` with the right headers. Return it from Next.js, Hono, Bun, Deno… */
   toResponse(options?: ResponseOptions): Response;
+  /** The document as HTML/CSS (real text, fonts and links), from the same layout as the PDF. */
+  preview(): Promise<EdgePreview>;
+  /** One PNG image per page, from the same layout as the PDF: thumbnails, emails, image diffs. */
+  toPng(options?: PngOptions): Promise<EdgePngPage[]>;
+}
+
+export interface Pdf extends EdgePdf {
+  /** Write the PDF to disk. Missing folders are created. */
+  save(path: string): Promise<void>;
+  /** The PDF bytes, as a Node `Buffer`. */
+  toBuffer(): Buffer;
   /** A Node stream of the PDF, for `stream.pipe(res)` in Express. */
   toStream(): import('node:stream').Readable;
-  /** The document as HTML/CSS (real text, fonts and links), from the same layout as the PDF. */
   preview(): Promise<Preview>;
-  /** One PNG image per page, from the same layout as the PDF: thumbnails, emails, image diffs. */
   toPng(options?: PngOptions): Promise<PngPage[]>;
 }

@@ -1,13 +1,14 @@
 // `create()`: source → document tree → native render (Rust engine, no browser, no network).
-import type { HtmlFromEngine } from '../preview';
-import { extname } from 'node:path';
+import type { HtmlFromEngine } from '../preview-types';
 import { TurboPdfError } from '../errors';
 import { FORMATS, normalizeMargin, toPx } from '../formats';
 import { holdSlotUntil } from '../queue';
 import type { Document, Edges, FontFace, Node, Page, PageSize, Warning as TreeWarning, Watermark } from '../tree';
 import type { CreateOptions, Format, ReactElementLike, Warning } from '../types';
 import { markdownToNodes } from './markdown';
-import { loadNative, nativeError, type NativeDocument } from './native';
+import { toBase64 } from '../bytes';
+import { nativeError, type NativeDocument } from './engine-api';
+import { defaultBaseDir, engine } from './provider';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
 
@@ -68,19 +69,19 @@ function geometry(o: CreateOptions, page: PageSetup): Geometry {
   return { size, ...(orientation ? { orientation } : {}), margin };
 }
 
-async function fontsOf(o: CreateOptions, buffers?: Buffer[]): Promise<FontFace[] | undefined> {
+async function fontsOf(o: CreateOptions, buffers?: Uint8Array[]): Promise<FontFace[] | undefined> {
   if (!o.fonts?.length) return undefined;
   const out: FontFace[] = [];
   for (const f of o.fonts) {
     if (!f.family || (f.path === undefined) === (f.data === undefined)) throw invalid('Each font needs a `family` and exactly one of `path` or `data`.');
-    if (f.path !== undefined && !['.ttf', '.otf'].includes(extname(f.path).toLowerCase())) {
+    if (f.path !== undefined && !/\.(ttf|otf)$/i.test(f.path)) {
       throw invalid(`Unsupported font file "${f.path}". Use .ttf or .otf (WOFF / WOFF2 are not supported).`);
     }
     // a path is read by the engine, inside baseDir; bytes go next to the tree, without base64
     let source: FontFace['source'];
     if (f.path !== undefined) source = { file: f.path };
-    else if (buffers) source = { buffer: buffers.push(Buffer.from(f.data!.buffer, f.data!.byteOffset, f.data!.byteLength)) - 1 };
-    else source = { data: Buffer.from(f.data!).toString('base64') };
+    else if (buffers) source = { buffer: buffers.push(f.data!) - 1 };
+    else source = { data: toBase64(f.data!) };
     const weight = f.weight === undefined ? 400 : f.weight === 'bold' ? 700 : f.weight === 'normal' ? 400 : Number(f.weight);
     if (!(weight >= 100 && weight <= 900)) throw invalid(`Invalid font weight "${String(f.weight)}" for "${f.family}". Use 100–900.`);
     out.push({ family: f.family, weight, style: f.style ?? 'normal', source });
@@ -119,7 +120,7 @@ interface Parts {
   page: PageSetup;
   /** `@font-face` fonts, as `{ buffer: n }` sources into `buffers`. */
   fonts: FontFace[];
-  buffers: Buffer[];
+  buffers: Uint8Array[];
 }
 
 function watermarkOf(w: CreateOptions['watermark']): Watermark | undefined {
@@ -133,14 +134,14 @@ function watermarkOf(w: CreateOptions['watermark']): Watermark | undefined {
  * HTML (from a string, from React, or only the header / footer of a Markdown document) → pages, by the
  * engine: HTML5 parsing, the CSS cascade, linked stylesheets and `@font-face` files read inside `baseDir`.
  */
-async function markupParts(markup: string, o: CreateOptions, baseDir: string, warnings: Warning[]): Promise<Parts> {
+async function markupParts(markup: string, o: CreateOptions, baseDir: string | undefined, warnings: Warning[]): Promise<Parts> {
   if (o.css !== undefined && typeof o.css !== 'string') throw invalid('`css` must be a string.');
   for (const k of ['header', 'footer'] as const) {
     if (o[k] !== undefined && typeof o[k] !== 'string') throw invalid(`\`${k}\` must be an HTML string.`);
   }
-  let out: { parts: string; buffers: Buffer[] };
+  let out: { parts: string; buffers: Uint8Array[] };
   try {
-    out = await loadNative().convertHtml(markup, { baseDir, css: o.css, header: o.header, footer: o.footer });
+    out = await engine().convertHtml(markup, { baseDir, css: o.css, header: o.header, footer: o.footer });
   } catch (e) {
     throw nativeError(e);
   }
@@ -153,9 +154,9 @@ async function markupParts(markup: string, o: CreateOptions, baseDir: string, wa
  * Build the document tree for any source. Exported for tests and debugging. With `buffers`, bytes given in
  * the options are appended to it and referenced as `{ buffer: n }` instead of being base64-encoded.
  */
-export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers?: Buffer[]): Promise<Document> {
+export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers?: Uint8Array[]): Promise<Document> {
   if (o.tree !== undefined) return o.tree;
-  const baseDir = o.baseDir ?? process.cwd();
+  const baseDir = o.baseDir ?? defaultBaseDir();
   let parts: Parts;
   if (o.markdown !== undefined) {
     if (typeof o.markdown !== 'string' || !o.markdown.trim()) throw invalid('`markdown` must be a non-empty string.');
@@ -221,7 +222,7 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
   buffers?.push(...parts.buffers);
   const faces = parts.fonts.map((f): FontFace => {
     const n = (f.source as { buffer: number }).buffer;
-    return { ...f, source: buffers ? { buffer: n + offset } : { data: parts.buffers[n]!.toString('base64') } };
+    return { ...f, source: buffers ? { buffer: n + offset } : { data: toBase64(parts.buffers[n]!) } };
   });
   const fonts = [...faces, ...((await fontsOf(o, buffers)) ?? [])];
   if (fonts.length) doc.fonts = fonts;
@@ -285,23 +286,23 @@ function withDeadline<T>(work: Promise<T>, o: CreateOptions): Promise<T> {
 }
 
 export interface RenderResult {
-  pdf: Buffer;
+  pdf: Uint8Array;
   pages: number;
   warnings: Warning[];
-  png(scale: number): Promise<Buffer[]>;
+  png(scale: number): Promise<Uint8Array[]>;
   html(): Promise<HtmlFromEngine>;
   meta: { title?: string; lang?: string };
 }
 
 export function renderPdf(o: CreateOptions): Promise<RenderResult> {
   const completion = (async (): Promise<RenderResult> => {
-    const native = loadNative();
+    const native = engine();
     const sdkWarnings: Warning[] = [];
-    const buffers: Buffer[] = [];
+    const buffers: Uint8Array[] = [];
     const doc = await toTree(o, sdkWarnings, buffers);
     let rendered: NativeDocument;
     try {
-      rendered = await native.render(JSON.stringify(doc), { baseDir: o.baseDir ?? process.cwd(), buffers });
+      rendered = await native.render(JSON.stringify(doc), { baseDir: o.baseDir ?? defaultBaseDir(), buffers });
     } catch (e) {
       throw e instanceof TurboPdfError ? e : nativeError(e);
     }

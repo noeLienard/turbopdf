@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { NativeEngine } from '../src/rust/native';
+import type { NativeEngine } from '../src/rust/engine-api';
 import { wasmEngine } from '../src/rust/wasm';
 
 const root = join(__dirname, '..');
@@ -13,7 +13,7 @@ const both = existsSync(nativeFile) && existsSync(wasmFile);
 
 describe.skipIf(!both)('wasm engine', () => {
   const native = (both ? createRequire(__filename)(nativeFile) : undefined) as NativeEngine;
-  const wasm = (both ? wasmEngine(join(root, 'wasm'), readFileSync(wasmFile)) : undefined) as NativeEngine;
+  const wasm = (both ? wasmEngine(readFileSync(wasmFile), join(root, 'src', 'rust')) : undefined) as NativeEngine;
 
   it('converts HTML exactly like the native engine', async () => {
     const html = readFileSync(join(root, 'examples/showcase/report.html'), 'utf8');
@@ -34,9 +34,9 @@ describe.skipIf(!both)('wasm engine', () => {
       const [a, b] = await Promise.all([native.render(tree, options), wasm.render(tree, options)]);
       expect(b.pages, f).toBe(a.pages);
       expect(b.warnings, f).toBe(a.warnings);
-      expect(b.takePdf().equals(a.takePdf()), f).toBe(true);
+      expect(Buffer.from(b.takePdf()).equals(a.takePdf()), f).toBe(true);
       const [pa, pb] = await Promise.all([a.png(1), b.png(1)]);
-      expect(pb.every((x, i) => x.equals(pa[i]!)), f).toBe(true);
+      expect(pb.every((x, i) => Buffer.from(x).equals(pa[i]!)), f).toBe(true);
       expect(await b.html(), f).toEqual(await a.html());
     }
   });

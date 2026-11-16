@@ -8,6 +8,11 @@ TurboPDF no longer uses a browser: every source is rendered by a Rust engine.
 
 ### Added
 
+- `turbopdf/edge`: the engine in WebAssembly with no Node API, for Cloudflare Workers, Deno Deploy, Netlify
+  / Vercel Edge and browsers (`init(wasm)` once, then `create()`). Checked in workerd (Cloudflare's runtime).
+  The package exports the engine as `turbopdf/turbopdf.wasm`. It replaces `engine/wasm/turbopdf.mjs`, which
+  rendered only document trees.
+- `pdf.toUint8Array()` and `page.toUint8Array()` next to `toBuffer()`.
 - CSS borders per side: `border-top` / `-right` / `-bottom` / `-left`, their `-width` / `-style` / `-color`, and
   `border-width` / `border-style` / `border-color` with one to four values, resolved in declaration order
   (tree: `borderTop`… next to `border`). Drawn in the PDF, the PNGs and the HTML preview.

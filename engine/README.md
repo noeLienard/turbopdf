@@ -15,7 +15,7 @@ Deterministic PDF engine: **document tree in → PDF, PNG previews and warnings 
 | `turbopdf-raster` | PNG previews (tiny-skia) |
 | `turbopdf-engine` | Public API: `Engine::render`, `preview`, `render_with_previews`, `layout` |
 | `turbopdf-node` | Node.js binding (napi-rs): `render`, `preview`, `version`; runs on the libuv pool; file access limited to `baseDir` |
-| `turbopdf-wasm` | WebAssembly build (plain C ABI) + `wasm/turbopdf.mjs` wrapper for Node and browsers |
+| `turbopdf-wasm` | WebAssembly build (plain C ABI), driven by the SDK's `src/rust/wasm-core.ts` |
 
 ```bash
 cargo test --workspace                    # all Rust tests
@@ -31,17 +31,14 @@ npm run build:wasm                        # (repo root) WebAssembly engine → w
 npm run test:wasm                         # (repo root) the whole SDK test suite on the WebAssembly engine
 ```
 
-The SDK uses the WebAssembly build by itself wherever no native binary exists (`src/rust/wasm.ts` +
-`wasm/engine.cjs`, in a worker thread, files read inside `baseDir` like the native module). Standalone
-usage, in Node or a browser (no dependency, no filesystem: use `{ "data": base64 }` sources):
+The SDK uses the WebAssembly build in two ways (`src/rust/wasm-core.ts`, no Node API):
 
-```js
-import { load } from './wasm/turbopdf.mjs';
-const engine = await load(await fetch('/turbopdf_wasm.wasm'));
-const { pdf, pages, warnings, previews } = engine.render(tree, { previews: 2 });
-```
+- `turbopdf` in Node, Bun and Deno, wherever no native binary exists: in a worker thread
+  (`dist/wasm-worker.cjs`), files read inside `baseDir` with the native rules and messages.
+- `turbopdf/edge` in edge runtimes and browsers: on the calling thread, no file system.
 
-The `.wasm` is 10.8 MB (Inter ×5, the hyphenation dictionaries and the HTML parser are embedded); 1.3–2× the
+The `.wasm` is 10.8 MB, 4.3 MB gzipped (Inter ×5, the hyphenation dictionaries and the HTML parser are
+embedded; `opt-level = "z"` only saves 0.25 MB gzipped); 1.3–2× the
 native time for a PDF (17 ms instead of 12 ms for the 200-row invoice), ~2.7× for PNGs.
 
 ## Performance

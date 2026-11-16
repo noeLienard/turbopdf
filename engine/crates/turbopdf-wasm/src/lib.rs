@@ -1,6 +1,6 @@
 //! WebAssembly entry points, with a plain C ABI so that no binding generator is needed. They mirror the
 //! Node binding (`render` → a prepared document, `convertHtml`, `htmlNodes`), so the SDK can use either.
-//! `src/rust/wasm.ts` (SDK) and `engine/wasm/turbopdf.mjs` (standalone) wrap them.
+//! `src/rust/wasm-core.ts` (SDK: `turbopdf` in a worker, `turbopdf/edge` on the calling thread) drives them.
 //!
 //! Inputs: the host allocates with `turbopdf_alloc`, writes, passes `ptr, len` and frees afterwards
 //! (except `turbopdf_push_buffer`, which takes ownership). Every call returns a status (0 = ok,
@@ -372,40 +372,4 @@ pub extern "C" fn turbopdf_version() -> u32 {
         turbopdf_engine::turbopdf_tree::TREE_VERSION
     )
     .into_bytes()))
-}
-
-// ------------------------------------------------------------------ legacy one-shot render
-
-/// Render a tree in one call (used by `engine/wasm/turbopdf.mjs`). `scale > 0` also renders PNGs.
-/// Output: `u32 pages | bytes warnings JSON | bytes PDF | u32 count | bytes*`.
-///
-/// # Safety
-/// `ptr..ptr+len` must be readable memory of this instance.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn turbopdf_render(ptr: *const u8, len: usize, scale: f32) -> u32 {
-    let tree = unsafe { std::slice::from_raw_parts(ptr, len) };
-    finish((|| {
-        let doc = parse(tree)?;
-        let prepared = ENGINE.with(|e| e.prepare(&doc)).map_err(engine_error)?;
-        let pdf = prepared.pdf().map_err(engine_error)?;
-        let previews = if scale > 0.0 {
-            prepared.png(scale).map_err(engine_error)?
-        } else {
-            Vec::new()
-        };
-        let mut out = Vec::with_capacity(pdf.len() + 1024);
-        out.extend_from_slice(&prepared.pages().to_le_bytes());
-        put(
-            &mut out,
-            serde_json::to_string(prepared.warnings())
-                .expect("warnings serialize")
-                .as_bytes(),
-        );
-        put(&mut out, &pdf);
-        out.extend_from_slice(&(previews.len() as u32).to_le_bytes());
-        for png in &previews {
-            put(&mut out, png);
-        }
-        Ok(out)
-    })())
 }

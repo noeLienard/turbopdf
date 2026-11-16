@@ -26,7 +26,9 @@ pub trait ResourceLoader: Send + Sync {
 pub struct NoLoader;
 impl ResourceLoader for NoLoader {
     fn load(&self, path: &str) -> Result<Vec<u8>, String> {
-        Err(format!("no resource loader available to read {path:?}"))
+        Err(format!(
+            "{path:?}: no baseDir was given, so files are not read. Pass the bytes instead (fonts: data, images: data: URLs)"
+        ))
     }
 }
 
