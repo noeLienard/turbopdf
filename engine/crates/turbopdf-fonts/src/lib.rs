@@ -1,7 +1,9 @@
 //! Font database.
 //!
 //! * Inter (Regular, SemiBold, Bold, Italic, Bold Italic) is **embedded in the binary**: the same tree
-//!   renders identically on every machine, and it is the final fallback.
+//!   renders identically on every machine, and it is the fallback for a family that is not loaded.
+//! * A symbols font (a subset of Noto Sans Symbols 2: arrows, check boxes, dingbats, shapes) is embedded
+//!   too: the last fallback for characters no other font has.
 //! * Extra fonts come from the tree (`fonts`) as bytes (inline base64, or `file` resolved by the host
 //!   through [`ResourceLoader`]). The core never touches the filesystem or the network.
 //! * Only the glyphs actually used end up in the PDF (subsetting is done by the PDF writer).
@@ -68,7 +70,7 @@ pub enum FontError {
     Load { family: String, reason: String },
 }
 
-const INTER: &[(&str, u16, bool, &[u8])] = &[
+const EMBEDDED: &[(&str, u16, bool, &[u8])] = &[
     (
         "Inter",
         400,
@@ -99,7 +101,18 @@ const INTER: &[(&str, u16, bool, &[u8])] = &[
         true,
         include_bytes!("../assets/Inter-BoldItalic.ttf"),
     ),
+    // arrows, check boxes, dingbats, geometric shapes and other symbols Inter lacks (✔ ✘ ☐ ☑ ✉ ➜ ♠ …),
+    // drawn when no font of the list has them. Subset of Noto Sans Symbols 2 (OFL) to those blocks.
+    (
+        SYMBOLS,
+        400,
+        false,
+        include_bytes!("../assets/NotoSansSymbols2-subset.ttf"),
+    ),
 ];
+
+/// The family of the built-in symbols font, the last fallback after Inter.
+pub const SYMBOLS: &str = "Noto Sans Symbols 2";
 
 /// All fonts known to one render. Cloning is cheap (faces are shared).
 #[derive(Clone)]
@@ -128,10 +141,10 @@ impl Default for FontDb {
 }
 
 impl FontDb {
-    /// A database holding only the embedded Inter faces.
+    /// A database holding only the embedded faces (Inter and the symbols font).
     pub fn with_embedded() -> Self {
         let mut db = FontDb { faces: Vec::new() };
-        for (family, weight, italic, bytes) in INTER {
+        for (family, weight, italic, bytes) in EMBEDDED {
             db.add(family, *weight, *italic, bytes.to_vec())
                 .expect("embedded Inter is valid");
         }
@@ -264,6 +277,12 @@ impl FontDb {
             .expect("pool is never empty")
     }
 
+    /// The built-in symbols face (the last fallback), unless the database has none.
+    pub fn symbols(&self) -> Option<FaceId> {
+        self.has_one_family(SYMBOLS)
+            .then(|| self.select_in(SYMBOLS, 400, false))
+    }
+
     /// Whether `family` (or one family of a list) is loaded (used to report a fallback).
     pub fn has_family(&self, family: &str) -> bool {
         !self.known(family).is_empty()
@@ -281,9 +300,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn embedded_inter_is_available() {
+    fn embedded_inter_and_symbols_are_available() {
         let db = FontDb::with_embedded();
-        assert_eq!(db.len(), 5);
+        assert_eq!(db.len(), 6); // 5 Inter faces + symbols
+        let sym = db.face(db.symbols().unwrap());
+        assert!(
+            ['☐', '✔', '➜']
+                .iter()
+                .all(|&c| sym.shaper().glyph_index(c).is_some())
+        );
+        // a family that is not loaded still means Inter, never the symbols font
+        assert_eq!(db.face(db.select("Nope", 400, false)).family, "Inter");
         let f = db.face(db.select("Inter", 400, false));
         assert_eq!((f.weight, f.italic), (400, false));
         assert!(f.units_per_em > 0.0 && f.ascender > 0.0 && f.descender < 0.0);

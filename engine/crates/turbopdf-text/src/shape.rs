@@ -1,4 +1,5 @@
-//! Shaping with rustybuzz: one face, then the next family of the list and Inter for missing glyphs;
+//! Shaping with rustybuzz: one face, then the next family of the list, Inter and the symbols font for
+//! missing glyphs;
 //! words and plans cached.
 
 use super::*;
@@ -111,7 +112,8 @@ pub(crate) fn shape(
     }
 }
 
-/// Split `text` in chunks that each use the first face able to draw every char; Inter is the fallback.
+/// Split `text` in chunks that each use the first face able to draw every char; Inter, then the symbols
+/// font, are the fallbacks.
 pub(crate) fn shape_with_fallback(
     db: &FontDb,
     cache: &mut ShapeCache,
@@ -119,11 +121,15 @@ pub(crate) fn shape_with_fallback(
     text: &str,
     missing: &mut Vec<MissingGlyph>,
 ) -> Vec<Run> {
-    // the face, the next family of the list, then Inter
+    // the face, the next family of the list, Inter, then the built-in symbols
     let mut chain = vec![style.face];
-    for id in [style.fallback, Some(fallback_face(db, style.face))]
-        .into_iter()
-        .flatten()
+    for id in [
+        style.fallback,
+        Some(fallback_face(db, style.face)),
+        db.symbols(),
+    ]
+    .into_iter()
+    .flatten()
     {
         if !chain.contains(&id) {
             chain.push(id);
