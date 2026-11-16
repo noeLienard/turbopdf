@@ -132,6 +132,15 @@ pub struct Style {
     pub margin: Option<Edges>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border: Option<Border>,
+    /// One side, instead of `border` for that side (`width: 0` removes it).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_top: Option<Border>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_right: Option<Border>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_bottom: Option<Border>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_left: Option<Border>,
     /// Corner radius in points.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_radius: Option<f32>,
@@ -139,6 +148,8 @@ pub struct Style {
     pub background_color: Option<Color>,
 
     // --- text (inherited)
+    /// A family, or a list (`"Brand, Noto Sans JP"`): the first loaded one is used, the next ones draw the
+    /// characters it lacks, then Inter.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     /// Points.
@@ -177,4 +188,27 @@ pub struct TextStyle {
     pub font_style: Option<FontStyle>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
+}
+
+impl Style {
+    /// After a field-by-field merge of `over` on top of a base: a `border` set in `over` replaces every
+    /// side of the base, as the CSS shorthand does.
+    pub fn reset_sides_from(&mut self, over: &Style) {
+        if over.border.is_some() {
+            self.border_top = over.border_top;
+            self.border_right = over.border_right;
+            self.border_bottom = over.border_bottom;
+            self.border_left = over.border_left;
+        }
+    }
+
+    /// The border of each side (`[top, right, bottom, left]`): its own if set, else `border`.
+    pub fn borders(&self) -> [Option<Border>; 4] {
+        [
+            self.border_top.or(self.border),
+            self.border_right.or(self.border),
+            self.border_bottom.or(self.border),
+            self.border_left.or(self.border),
+        ]
+    }
 }

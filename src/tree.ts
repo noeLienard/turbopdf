@@ -281,9 +281,18 @@ position?: Position, top?: Dimension, right?: Dimension, bottom?: Dimension, lef
  */
 aspectRatio?: number, padding?: Edges, margin?: Edges, border?: Border, 
 /**
+ * One side, instead of `border` for that side (`width: 0` removes it).
+ */
+borderTop?: Border, borderRight?: Border, borderBottom?: Border, borderLeft?: Border, 
+/**
  * Corner radius in points.
  */
-borderRadius?: number, backgroundColor?: Color, fontFamily?: string, 
+borderRadius?: number, backgroundColor?: Color, 
+/**
+ * A family, or a list (`"Brand, Noto Sans JP"`): the first loaded one is used, the next ones draw the
+ * characters it lacks, then Inter.
+ */
+fontFamily?: string, 
 /**
  * Points.
  */

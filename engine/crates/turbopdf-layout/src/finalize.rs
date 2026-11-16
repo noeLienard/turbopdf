@@ -47,6 +47,7 @@ fn watermark_ops(db: &FontDb, w: &t::Watermark, pw: f32, ph: f32) -> Vec<DrawOp>
     let shape = |size: f32| {
         let style = text::TextStyle {
             face,
+            fallback: None,
             size,
             color,
             line_height: 1.0,

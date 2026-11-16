@@ -24,6 +24,7 @@ use std::collections::BTreeMap;
 use turbopdf_fonts::{FaceId, FontDb};
 use turbopdf_layout::{
     ArtifactKind, BorderSpec, DrawOp, ImageKind, Layout, OutlineEntry, StructRole, Tag, Visual,
+    border_bar,
 };
 use turbopdf_text::{Rgba, Run};
 use turbopdf_tree::{BorderStyle, Meta, ObjectFit};
@@ -229,10 +230,9 @@ fn draw_box(
         s.set_stroke(None);
         s.draw_path(&p);
     }
-    let Some(b) = v.border else { return };
-    let bw = b.width;
-    if sides.iter().all(|&d| d) {
-        // all four sides: ONE stroked outline (4x fewer operations than four bars), inset by half the width
+    if let Some(b) = v.outline(sides) {
+        // four identical sides: ONE stroked outline (4x fewer operations than four bars), inset by half the width
+        let bw = b.width;
         if let Some(p) = rect_path(
             x + bw / 2.0,
             y + bw / 2.0,
@@ -240,43 +240,64 @@ fn draw_box(
             h - bw,
             (v.radius - bw / 2.0).max(0.0),
         ) {
-            let dash = match b.style {
-                BorderStyle::Solid => None,
-                BorderStyle::Dashed => Some(StrokeDash {
-                    array: vec![bw * 3.0, bw * 2.0],
-                    offset: 0.0,
-                }),
-                BorderStyle::Dotted => Some(StrokeDash {
-                    array: vec![bw, bw * 1.5],
-                    offset: 0.0,
-                }),
-            };
             s.set_fill(None);
-            s.set_stroke(Some(Stroke {
-                paint: rgb::Color::new(b.color[0], b.color[1], b.color[2]).into(),
-                width: bw,
-                opacity: NormalizedF32::new(b.color[3] as f32 / 255.0).unwrap(),
-                dash,
-                ..Default::default()
-            }));
+            s.set_stroke(Some(stroke_of(&b)));
             s.draw_path(&p);
         }
         return;
     }
-    // partial borders: filled bars, so a box cut by a page break can drop its top/bottom edge
-    s.set_stroke(None);
-    s.set_fill(Some(fill_of(b.color)));
-    let bars = [
-        (sides[0], x, y, w, bw),
-        (sides[1], x + w - bw, y, bw, h),
-        (sides[2], x, y + h - bw, w, bw),
-        (sides[3], x, y, bw, h),
-    ];
-    for (on, bx, by, bwid, bh) in bars {
-        if on && let Some(p) = rect_path(bx, by, bwid, bh, 0.0) {
+    // sides that differ, or a box cut by a page break: one bar per side, each with its own style
+    for (side, b) in v.borders(sides).into_iter().enumerate() {
+        let Some(b) = b else { continue };
+        let (bx, by, bw, bh) = border_bar(side, x, y, w, h, b.width);
+        if b.style == BorderStyle::Solid {
+            if let Some(p) = rect_path(bx, by, bw, bh, 0.0) {
+                s.set_stroke(None);
+                s.set_fill(Some(fill_of(b.color)));
+                s.draw_path(&p);
+            }
+        } else if let Some(p) = bar_line(side, bx, by, bw, bh) {
+            s.set_fill(None);
+            s.set_stroke(Some(stroke_of(&b)));
             s.draw_path(&p);
         }
     }
+}
+
+/// A stroke for a border: its width, colour and dash pattern.
+fn stroke_of(b: &BorderSpec) -> Stroke {
+    let bw = b.width;
+    let dash = match b.style {
+        BorderStyle::Solid => None,
+        BorderStyle::Dashed => Some(StrokeDash {
+            array: vec![bw * 3.0, bw * 2.0],
+            offset: 0.0,
+        }),
+        BorderStyle::Dotted => Some(StrokeDash {
+            array: vec![bw, bw * 1.5],
+            offset: 0.0,
+        }),
+    };
+    Stroke {
+        paint: rgb::Color::new(b.color[0], b.color[1], b.color[2]).into(),
+        width: bw,
+        opacity: NormalizedF32::new(b.color[3] as f32 / 255.0).unwrap(),
+        dash,
+        ..Default::default()
+    }
+}
+
+/// The centre line of a border bar, to stroke with a dash pattern.
+fn bar_line(side: usize, x: f32, y: f32, w: f32, h: f32) -> Option<Path> {
+    let mut pb = PathBuilder::new();
+    if matches!(side, 0 | 2) {
+        pb.move_to(x, y + h / 2.0);
+        pb.line_to(x + w, y + h / 2.0);
+    } else {
+        pb.move_to(x + w / 2.0, y);
+        pb.line_to(x + w / 2.0, y + h);
+    }
+    pb.finish()
 }
 
 // ------------------------------------------------------------------ batching
@@ -298,7 +319,12 @@ struct BoxItem {
 }
 
 fn batchable(v: &Visual, w: f32, h: f32) -> bool {
-    w > 0.0 && h > 0.0 && v.radius <= 0.0 && v.border.is_none_or(|b| b.style == BorderStyle::Solid)
+    w > 0.0
+        && h > 0.0
+        && v.radius <= 0.0
+        && v.border
+            .iter()
+            .all(|b| b.is_none_or(|b| b.style == BorderStyle::Solid))
 }
 
 fn overlaps(a: &BoxItem, b: &BoxItem) -> bool {
@@ -331,13 +357,10 @@ fn draw_boxes(s: &mut krilla::surface::Surface, items: &[BoxItem]) {
         if let Some(bg) = it.visual.background {
             push_rect(group(&mut backgrounds, bg), it.x, it.y, it.w, it.h);
         }
-        let Some(BorderSpec {
+        if let Some(BorderSpec {
             width: bw, color, ..
-        }) = it.visual.border
-        else {
-            continue;
-        };
-        if it.sides.iter().all(|&d| d) {
+        }) = it.visual.outline(it.sides)
+        {
             push_rect(
                 group(&mut outlines, (bw.to_bits(), color)),
                 it.x + bw / 2.0,
@@ -345,18 +368,12 @@ fn draw_boxes(s: &mut krilla::surface::Surface, items: &[BoxItem]) {
                 it.w - bw,
                 it.h - bw,
             );
-        } else {
-            let pb = group(&mut bars, color);
-            let (x, y, w, h) = (it.x, it.y, it.w, it.h);
-            for (on, bx, by, bwid, bh) in [
-                (it.sides[0], x, y, w, bw),
-                (it.sides[1], x + w - bw, y, bw, h),
-                (it.sides[2], x, y + h - bw, w, bw),
-                (it.sides[3], x, y, bw, h),
-            ] {
-                if on {
-                    push_rect(pb, bx, by, bwid, bh);
-                }
+            continue;
+        }
+        for (side, b) in it.visual.borders(it.sides).into_iter().enumerate() {
+            if let Some(b) = b {
+                let (bx, by, bwid, bh) = border_bar(side, it.x, it.y, it.w, it.h, b.width);
+                push_rect(group(&mut bars, b.color), bx, by, bwid, bh);
             }
         }
     }

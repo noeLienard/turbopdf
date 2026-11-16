@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { Document, Heading, Image, Link, Page, PageBreak, PageNumber, QR, TableOfContents, Text, View } from '../src/components';
 import turbopdf from '../src/index';
 import { toTree } from '../src/rust/engine';
-import { FONT_GLYPH, FONT_PATH, outline, pageLinks, pageTexts, pdfHas, pixelAt } from './helpers';
+import { FONT_GLYPH, FONT_PATH, firstTextLeft, outline, pageLinks, pageTexts, pdfHas, pixelAt } from './helpers';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const WEBP_1X1 = 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
@@ -253,5 +253,51 @@ describe('QR codes', () => {
 
   it('an empty QR code is a clear error', async () => {
     await expect(turbopdf.create('<img src="qr:">')).rejects.toMatchObject({ code: 'invalid_tree' });
+  });
+});
+
+describe('borders', () => {
+  it('draws each side with its own width, colour and style, in the PDF and the preview', async () => {
+    const html = `<div style="width:100pt;height:50pt;border-bottom:6pt solid #ff0000;border-right:6pt solid #0000ff"></div>`;
+    const pdf = await turbopdf.create({ html, margin: 0 });
+    const bytes = pdf.toBuffer();
+    near(pixelAt(bytes, 50, 47), [255, 0, 0]); // bottom
+    near(pixelAt(bytes, 97, 25), [0, 0, 255]); // right (border-box: inside the 100pt)
+    near(pixelAt(bytes, 50, 2), [255, 255, 255]); // no top
+    near(pixelAt(bytes, 2, 25), [255, 255, 255]); // no left
+    const { pages } = await pdf.preview();
+    expect(pages[0]!.html).toContain('border-bottom:6pt solid #ff0000');
+    expect(pages[0]!.html).not.toContain('border-top');
+  });
+
+  it('a later side overrides the shorthand from a stylesheet', async () => {
+    const pdf = await turbopdf.create({ html: '<div class="b"></div>', css: '.b { width: 100pt; height: 50pt; border: 6pt solid #0000ff } .b { border-top: none }', margin: 0 });
+    const bytes = pdf.toBuffer();
+    near(pixelAt(bytes, 50, 2), [255, 255, 255]);
+    near(pixelAt(bytes, 50, 47), [0, 0, 255]);
+  });
+});
+
+describe('float', () => {
+  const page = { margin: 0, width: '200pt', height: '200pt' } as const;
+
+  it('floated columns sit side by side, right floats go to the right', async () => {
+    const html = `<div style="float:left;width:50pt;height:40pt;background:#ff0000"></div>
+      <div style="float:left;width:50pt;height:40pt;background:#00ff00"></div>
+      <div style="float:right;width:50pt;height:40pt;background:#0000ff"></div>`;
+    const bytes = (await turbopdf.create({ html, ...page })).toBuffer();
+    near(pixelAt(bytes, 25, 20), [255, 0, 0]);
+    near(pixelAt(bytes, 75, 20), [0, 255, 0]); // beside the first, not under it
+    near(pixelAt(bytes, 175, 20), [0, 0, 255]); // at the right edge
+    near(pixelAt(bytes, 125, 20), [255, 255, 255]);
+  });
+
+  it('text after a float flows beside it, and clear goes below', async () => {
+    const html = `<img src="qr:hello" style="float:left;width:80pt;height:80pt">
+      <p>Beside the code</p><p style="clear:both">Below</p>`;
+    const pdf = await turbopdf.create({ html, ...page });
+    expect(firstTextLeft(pdf.toBuffer())).toBeGreaterThan(79);
+    expect(pageTexts(pdf.toBuffer())[0]).toMatch(/Beside the code[\s\S]*Below/);
+    expect(pdf.warnings).toEqual([]);
   });
 });

@@ -84,6 +84,7 @@ pub fn spans(
         text: text.to_string(),
         style: TextStyle {
             face: db.select(&i.family, i.weight, i.italic),
+            fallback: db.select_fallback(&i.family, i.weight, i.italic),
             size: i.size,
             color: i.color,
             line_height: i.line_height,
@@ -137,7 +138,7 @@ macro_rules! merge_fields {
 
 /// `over` wins over `base`, field by field.
 pub fn merge(base: &t::Style, over: &t::Style) -> t::Style {
-    merge_fields!(
+    let mut s = merge_fields!(
         base,
         over,
         display,
@@ -170,6 +171,10 @@ pub fn merge(base: &t::Style, over: &t::Style) -> t::Style {
         padding,
         margin,
         border,
+        border_top,
+        border_right,
+        border_bottom,
+        border_left,
         border_radius,
         background_color,
         font_family,
@@ -179,7 +184,9 @@ pub fn merge(base: &t::Style, over: &t::Style) -> t::Style {
         color,
         text_align,
         line_height
-    )
+    );
+    s.reset_sides_from(over);
+    s
 }
 
 pub fn merge_opt(base: Option<&t::Style>, over: Option<&t::Style>) -> t::Style {
@@ -209,14 +216,14 @@ fn dim_lpa(d: t::Dimension) -> LengthPercentageAuto {
 
 /// Visual (background / border / radius) of a style.
 pub fn visual(s: &t::Style) -> Option<crate::Visual> {
-    let border = s
-        .border
-        .filter(|b| b.width > 0.0 && b.color.a > 0)
-        .map(|b| crate::BorderSpec {
-            width: b.width,
-            color: rgba(b.color),
-            style: b.style.unwrap_or(t::BorderStyle::Solid),
-        });
+    let border = s.borders().map(|b| {
+        b.filter(|b| b.width > 0.0 && b.color.a > 0)
+            .map(|b| crate::BorderSpec {
+                width: b.width,
+                color: rgba(b.color),
+                style: b.style.unwrap_or(t::BorderStyle::Solid),
+            })
+    });
     let background = s.background_color.filter(|c| c.a > 0).map(rgba);
     let v = crate::Visual {
         background,
@@ -229,8 +236,13 @@ pub fn visual(s: &t::Style) -> Option<crate::Visual> {
 /// padding + border thickness on each side: `[top, right, bottom, left]`.
 pub fn insets(s: &t::Style) -> [f32; 4] {
     let p = s.padding.map_or([0.0; 4], |e| e.resolve());
-    let b = s.border.map_or(0.0, |b| b.width.max(0.0));
-    [p[0] + b, p[1] + b, p[2] + b, p[3] + b]
+    let b = border_widths(s);
+    [p[0] + b[0], p[1] + b[1], p[2] + b[2], p[3] + b[3]]
+}
+
+/// Border thickness of each side, `[top, right, bottom, left]`.
+pub fn border_widths(s: &t::Style) -> [f32; 4] {
+    s.borders().map(|b| b.map_or(0.0, |b| b.width.max(0.0)))
 }
 
 /// Convert to a taffy style. `column` = default flex direction (containers are columns).
@@ -348,13 +360,13 @@ pub fn to_taffy(s: &t::Style) -> Style {
             left: LengthPercentage::length(l),
         };
     }
-    if let Some(b) = s.border {
-        let w = LengthPercentage::length(b.width.max(0.0));
+    let [bt, br, bb, bl] = border_widths(s);
+    if bt + br + bb + bl > 0.0 {
         ts.border = Rect {
-            top: w,
-            right: w,
-            bottom: w,
-            left: w,
+            top: LengthPercentage::length(bt),
+            right: LengthPercentage::length(br),
+            bottom: LengthPercentage::length(bb),
+            left: LengthPercentage::length(bl),
         };
     }
     ts.position = match s.position {

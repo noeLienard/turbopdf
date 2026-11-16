@@ -165,9 +165,46 @@ impl FontDb {
         self.faces.is_empty()
     }
 
-    /// Best face for a request. Order of preference: family (case-insensitive) → italic match →
-    /// nearest weight; if the family is unknown, Inter is used (final fallback).
+    /// The families of a CSS-like list (`"Brand", Georgia, sans-serif`), quotes removed. Generic
+    /// sans-serif names mean the built-in Inter.
+    fn families(list: &str) -> impl Iterator<Item = &str> {
+        list.split(',')
+            .map(|f| f.trim().trim_matches(['"', '\'']).trim())
+            .filter(|f| !f.is_empty())
+            .map(|f| match f.to_ascii_lowercase().as_str() {
+                "sans-serif" | "system-ui" | "ui-sans-serif" | "-apple-system" => "Inter",
+                _ => f,
+            })
+    }
+
+    /// The loaded families of `list`, in order (each once).
+    fn known<'a>(&self, list: &'a str) -> Vec<&'a str> {
+        let mut out: Vec<&str> = Vec::new();
+        for f in Self::families(list) {
+            if self.has_one_family(f) && !out.iter().any(|o| o.eq_ignore_ascii_case(f)) {
+                out.push(f);
+            }
+        }
+        out
+    }
+
+    /// Best face for a request. `family` may be a list (`Brand, Georgia, sans-serif`): the first loaded
+    /// family is used. Then italic match → nearest weight. If no family of the list is loaded, Inter
+    /// is used (final fallback).
     pub fn select(&self, family: &str, weight: u16, italic: bool) -> FaceId {
+        let name = self.known(family).first().copied().unwrap_or("Inter");
+        self.select_in(name, weight, italic)
+    }
+
+    /// The face of the next loaded family of the list, for characters the first one does not have
+    /// (as browsers do). `None` when the list has a single loaded family.
+    pub fn select_fallback(&self, family: &str, weight: u16, italic: bool) -> Option<FaceId> {
+        self.known(family)
+            .get(1)
+            .map(|name| self.select_in(name, weight, italic))
+    }
+
+    fn select_in(&self, family: &str, weight: u16, italic: bool) -> FaceId {
         let in_family = |f: &str| -> Vec<FaceId> {
             (0..self.faces.len())
                 .filter(|&i| self.faces[i].family.eq_ignore_ascii_case(f))
@@ -197,8 +234,12 @@ impl FontDb {
             .expect("pool is never empty")
     }
 
-    /// Whether `family` is known (used to report a fallback).
+    /// Whether `family` (or one family of a list) is loaded (used to report a fallback).
     pub fn has_family(&self, family: &str) -> bool {
+        !self.known(family).is_empty()
+    }
+
+    fn has_one_family(&self, family: &str) -> bool {
         self.faces
             .iter()
             .any(|f| f.family.eq_ignore_ascii_case(family))
@@ -251,6 +292,21 @@ mod tests {
         let id = db.add("Brand", 400, false, data).unwrap();
         assert_eq!(db.select("brand", 400, false), id);
         assert_eq!(db.select("Brand", 700, true), id); // only face of the family
+    }
+
+    #[test]
+    fn family_lists_use_the_first_loaded_family_and_keep_the_next_as_fallback() {
+        let mut db = FontDb::with_embedded();
+        let data = include_bytes!("../assets/Inter-Regular.ttf").to_vec();
+        let brand = db.add("Brand", 400, false, data).unwrap();
+        assert_eq!(db.select("'Missing', \"Brand\", serif", 400, false), brand);
+        assert_eq!(db.select_fallback("Missing, Brand", 400, false), None);
+        let inter = db.select("Inter", 400, false);
+        assert_eq!(db.select("Georgia, sans-serif", 400, false), inter);
+        assert_eq!(db.select("Inter, Brand", 400, false), inter);
+        assert_eq!(db.select_fallback("Inter, Brand", 400, false), Some(brand));
+        assert!(db.has_family("Nope, Brand"));
+        assert!(!db.has_family("Nope, Georgia"));
     }
 
     #[test]

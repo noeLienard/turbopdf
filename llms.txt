@@ -14,7 +14,7 @@ This file is for AI coding assistants. It is the whole API in one page. Full gui
 - Relative paths are read from `baseDir` (default: the working directory) and never outside it.
 - JavaScript in the HTML never runs. Render data into the markup first, or use React.
 - Component and tree sizes are in points (1/72 in). CSS lengths are CSS (`px`, `mm`, `em`…).
-- Unsupported CSS: `float`, WOFF/WOFF2 and web fonts loaded from a URL. Use Flexbox or Grid, and local TTF/OTF files.
+- Unsupported: WOFF/WOFF2 and web fonts loaded from a URL (use local TTF/OTF files). `float` works for simple cases (columns, a logo or image with text beside it); prefer Flexbox or Grid for layouts.
 - Problems are **returned** in `pdf.warnings`, not thrown. Check them, or pass `strict: true` to throw.
 
 ## Create

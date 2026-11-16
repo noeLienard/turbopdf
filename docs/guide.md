@@ -171,11 +171,14 @@ the `css` option and `style` attributes, cascaded by specificity (`!important` i
   `screen` rules do not.
 - **Properties**: `display` (`block`, `flex`, `grid`, `none`), Flexbox, CSS Grid auto-placement with fixed,
   percentage and `fr` tracks (`repeat()` included), `width` / `height` and their
-  min/max, `margin`, `padding`, `border`, `border-radius`, `background(-color)`, `color`, `font-family`,
-  `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`, `break-before` / `break-after` /
+  min/max, `margin`, `padding`, `border` and each side (`border-top`…, `border-width` / `-style` / `-color`
+  with one to four values), `border-radius`, `background(-color)`, `color`, `font-family` (a list: the first
+  loaded family is used, the next ones draw the characters it lacks), `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`, `break-before` / `break-after` /
   `break-inside` (and the `page-break-*` aliases), `position: absolute` (and `fixed`) with `top` / `right` /
   `bottom` / `left` / `inset`, placed in the parent box. Lengths accept `em`, `rem`, `vw`, `vh` and absolute
   units, plus `calc()`, `min()`, `max()` and `clamp()` when they resolve to a physical length.
+- **Floats**: `float: left / right` and `clear`, for columns, a logo on the right or an image with text beside
+  it. Text flows beside a float but does not wrap under it once past its bottom; for complex layouts use Flexbox.
 - **Elements**: `div` and the other block elements, `p`, `h1`–`h6`, `span` / `b` / `strong` / `i` / `em`, `br`,
   `hr`, `a href` (a URL or `#id`, around text or around a whole block), `img` (PNG, JPEG, WebP, GIF, SVG),
   inline `<svg>` (drawn as vectors), `table` (with `thead`, repeated on every page), `ul` / `ol`, `pre`,
@@ -183,7 +186,7 @@ the `css` option and `style` attributes, cascaded by specificity (`!important` i
 - **Fonts**: `@font-face { font-family: Brand; src: url(fonts/brand.ttf) }` with local `.ttf` / `.otf` files,
   read inside `baseDir` (relative to the stylesheet that declares them).
 
-Not supported: JavaScript, `float`, web fonts downloaded from a URL and WOFF / WOFF2 files (a
+Not supported: JavaScript, web fonts downloaded from a URL and WOFF / WOFF2 files (a
 `font_failed` warning says what to do), remote images and stylesheets (each one gives a warning).
 
 ### Markdown

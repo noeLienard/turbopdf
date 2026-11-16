@@ -158,8 +158,16 @@ impl Ctx {
         }
         self.edges(&p("padding"), "padding", &s.padding, false);
         self.edges(&p("margin"), "margin", &s.margin, true);
-        if let Some(b) = &s.border {
-            self.non_negative(&p("border/width"), "border width", b.width)
+        for (key, b) in [
+            ("border", &s.border),
+            ("borderTop", &s.border_top),
+            ("borderRight", &s.border_right),
+            ("borderBottom", &s.border_bottom),
+            ("borderLeft", &s.border_left),
+        ] {
+            if let Some(b) = b {
+                self.non_negative(&p(&format!("{key}/width")), "border width", b.width)
+            }
         }
         if let Some(v) = s.border_radius {
             self.non_negative(&p("borderRadius"), "borderRadius", v)
