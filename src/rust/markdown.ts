@@ -2,7 +2,8 @@
 import MarkdownIt from 'markdown-it';
 import type { Cell, Column, Node, Row, Span, TextContent, TextStyle } from '../tree';
 import { TurboPdfError } from '../errors';
-import { loadNative, nativeError } from './native';
+import { nativeError } from './engine-api';
+import { engine } from './provider';
 
 const md = new MarkdownIt({ html: true, linkify: true, breaks: false });
 // `![Billet](qr:https://…)` is a QR code: keep its text exactly as written (no percent-encoding)
@@ -13,7 +14,7 @@ type Token = ReturnType<typeof md.parse>[number];
 /** Raw HTML in Markdown → nodes, converted by the engine (HTML5 parsing, inline styles). */
 function htmlNodes(html: string): Node[] {
   try {
-    return JSON.parse(loadNative().htmlNodes(html)) as Node[];
+    return JSON.parse(engine().htmlNodes(html)) as Node[];
   } catch (e) {
     throw e instanceof TurboPdfError ? e : nativeError(e);
   }

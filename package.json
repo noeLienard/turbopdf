@@ -45,7 +45,18 @@
         "types": "./dist/tree.d.cts",
         "default": "./dist/tree.cjs"
       }
-    }
+    },
+    "./edge": {
+      "import": {
+        "types": "./dist/edge.d.ts",
+        "default": "./dist/edge.js"
+      },
+      "require": {
+        "types": "./dist/edge.d.cts",
+        "default": "./dist/edge.cjs"
+      }
+    },
+    "./turbopdf.wasm": "./wasm/turbopdf.wasm"
   },
   "bin": {
     "turbopdf": "./dist/cli.js"
@@ -53,7 +64,6 @@
   "files": [
     "dist",
     "native",
-    "wasm/engine.cjs",
     "wasm/turbopdf.wasm",
     "README.md",
     "llms.txt",

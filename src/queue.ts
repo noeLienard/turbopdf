@@ -1,5 +1,5 @@
 import { TurboPdfError } from './errors';
-import { loadNative } from './rust/native';
+import { engine } from './rust/provider';
 import type { ConfigureOptions } from './types';
 
 /**
@@ -78,7 +78,7 @@ export async function withSlot<T>(signal: AbortSignal | undefined, work: () => P
 
 /** Load the engine now (module + embedded fonts) so the first PDF does not pay for it. */
 export async function warmup(): Promise<void> {
-  await loadNative().render(JSON.stringify({ type: 'document', version: 1, children: [{ type: 'page', children: [{ type: 'text', content: 'a' }] }] }));
+  await engine().render(JSON.stringify({ type: 'document', version: 1, children: [{ type: 'page', children: [{ type: 'text', content: 'a' }] }] }));
 }
 
 /** Nothing to close: there is no browser. Kept so code written for earlier versions keeps working. */

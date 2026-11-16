@@ -1,5 +1,6 @@
 import { create } from './create';
 import { close, configure, warmup } from './queue';
+import './node-host';
 
 export { create } from './create';
 export { close, configure, warmup } from './queue';

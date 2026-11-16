@@ -3,28 +3,10 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TurboPdfError } from '../errors';
+import type { NativeEngine } from './engine-api';
 import { wasmEngine } from './wasm';
 
-/** A document laid out by the engine: PNGs and the HTML preview are drawn from the same layout. */
-export interface NativeDocument {
-  readonly pages: number;
-  /** JSON array of the engine's warnings. */
-  readonly warnings: string;
-  /** The PDF bytes, handed over without a copy: only once. */
-  takePdf(): Buffer;
-  png(scale?: number): Promise<Buffer[]>;
-  html(): Promise<{ style: string; pages: { width: number; height: number; html: string }[] }>;
-}
-
-/** The napi module built from `engine/crates/turbopdf-node`. */
-export interface NativeEngine {
-  render(tree: string, options?: { baseDir?: string; buffers?: Buffer[] }): Promise<NativeDocument>;
-  /** HTML → document parts (JSON), with the CSS cascade; stylesheets and fonts read inside `baseDir`. */
-  convertHtml(html: string, options?: { baseDir?: string; css?: string; header?: string; footer?: string }): Promise<{ parts: string; buffers: Buffer[] }>;
-  /** An HTML fragment → JSON array of tree nodes (inline styles only, no files). */
-  htmlNodes(html: string): string;
-  version(): string;
-}
+export { nativeError, type NativeDocument, type NativeEngine } from './engine-api';
 
 let cached: NativeEngine | undefined;
 
@@ -49,18 +31,29 @@ export function platformTarget(): string {
   return `${base}-${report?.header?.glibcVersionRuntime ? 'gnu' : 'musl'}`;
 }
 
-/** The folder with `engine.cjs` and `turbopdf.wasm`. */
-function wasmDir(): string | undefined {
+/** `wasm/turbopdf.wasm` of the package. */
+function wasmFile(): string | undefined {
   return [
-    process.env.TURBOPDF_WASM_DIR,
-    join(here, '..', 'wasm'), // dist/index.js → wasm/
-    join(here, '..', '..', 'wasm'), // src/rust/native.ts → wasm/ (tests)
-  ].find((d): d is string => Boolean(d) && existsSync(join(d!, 'turbopdf.wasm')) && existsSync(join(d!, 'engine.cjs')));
+    process.env.TURBOPDF_WASM,
+    join(here, '..', 'wasm', 'turbopdf.wasm'), // dist/index.js → wasm/
+    join(here, '..', '..', 'wasm', 'turbopdf.wasm'), // src/rust/native.ts → wasm/ (tests)
+  ].find((p): p is string => Boolean(p) && existsSync(p!));
 }
 
 function loadWasm(): NativeEngine | undefined {
-  const dir = wasmDir();
-  return dir ? wasmEngine(dir, readFileSync(join(dir, 'turbopdf.wasm'))) : undefined;
+  const file = wasmFile();
+  return file ? wasmEngine(readFileSync(file), here) : undefined;
+}
+
+/** The napi module takes `Buffer`s: Uint8Arrays are viewed as Buffers, without a copy. */
+function native(m: NativeEngine): NativeEngine {
+  const asBuffer = (u8: Uint8Array) => (Buffer.isBuffer(u8) ? u8 : Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength));
+  return {
+    render: (tree, options) => m.render(tree, options && { ...options, buffers: options.buffers?.map(asBuffer) }),
+    convertHtml: (html, options) => m.convertHtml(html, options),
+    htmlNodes: (html) => m.htmlNodes(html),
+    version: () => m.version(),
+  };
 }
 
 /** The fastest engine available: a native binary for this platform, else the WebAssembly build. */
@@ -70,10 +63,10 @@ export function loadNative(): NativeEngine {
   if (mode !== 'wasm') {
     const require = createRequire(join(here, 'noop.js'));
     for (const path of candidates()) {
-      if (existsSync(path)) return (cached = require(path) as NativeEngine);
+      if (existsSync(path)) return (cached = native(require(path) as NativeEngine));
     }
     try {
-      return (cached = require(`@turbopdf/engine-${platformTarget()}`) as NativeEngine);
+      return (cached = native(require(`@turbopdf/engine-${platformTarget()}`) as NativeEngine));
     } catch {
       // no native binary for this platform: fall back to WebAssembly below
     }
@@ -86,18 +79,4 @@ export function loadNative(): NativeEngine {
       ? `No native engine for ${process.platform}-${process.arch}. Unset TURBOPDF_ENGINE to use the WebAssembly build, or build it with \`npm run build:native\` (needs Rust).`
       : `The TurboPDF engine is missing (no native binary for ${process.platform}-${process.arch}, no wasm/turbopdf.wasm). Reinstall turbopdf, or build it with \`npm run build:native\` (needs Rust).`,
   );
-}
-
-/** Errors thrown by the native module carry a JSON message `{ code, message, details? }`. */
-export function nativeError(e: unknown): TurboPdfError {
-  const raw = e instanceof Error ? e.message : String(e);
-  try {
-    const { code, message, details } = JSON.parse(raw) as { code: string; message: string; details?: unknown };
-    const known = code === 'invalid_tree' || code === 'font_failed' || code === 'not_accessible' || code === 'invalid_option' ? (code === 'invalid_option' ? 'invalid_source' : code) : 'render_failed';
-    const err = new TurboPdfError(known, message, { cause: e });
-    if (details !== undefined) err.details = details;
-    return err;
-  } catch {
-    return new TurboPdfError('render_failed', `The Rust engine failed: ${raw}`, { cause: e });
-  }
 }

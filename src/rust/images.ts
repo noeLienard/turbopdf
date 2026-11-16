@@ -1,5 +1,6 @@
 // Image sources for the document tree: file paths, `data:` URLs and raw bytes, with their format.
 import type { BinarySource, ImageFormat, ImageSource } from '../tree';
+import { toBase64, utf8 } from '../bytes';
 
 const MIME: Record<string, ImageFormat> = { png: 'png', jpeg: 'jpeg', jpg: 'jpeg', webp: 'webp', gif: 'gif', 'svg+xml': 'svg', svg: 'svg' };
 
@@ -23,7 +24,7 @@ export function imageSource(src: string): { src: ImageSource; format?: ImageForm
   if (data) {
     const format = MIME[data[1]!.toLowerCase()];
     // `data:image/svg+xml;utf8,<svg …>` is URL-encoded text: the tree wants base64
-    const payload = data[3] ? data[4]!.replace(/\s+/g, '') : Buffer.from(decodeURIComponent(data[4]!), 'utf8').toString('base64');
+    const payload = data[3] ? data[4]!.replace(/\s+/g, '') : toBase64(utf8(decodeURIComponent(data[4]!)));
     return { src: { data: payload }, format };
   }
   const ext = /\.([a-z]+)(?:[?#].*)?$/i.exec(src)?.[1]?.toLowerCase();
@@ -32,11 +33,11 @@ export function imageSource(src: string): { src: ImageSource; format?: ImageForm
 
 /** Raw bytes → tree source and format. */
 export function imageBytes(bytes: Uint8Array): { src: BinarySource; format?: ImageFormat } {
-  return { src: { data: Buffer.from(bytes).toString('base64') }, format: sniff(bytes) };
+  return { src: { data: toBase64(bytes) }, format: sniff(bytes) };
 }
 
 /** An inline `<svg>…</svg>` (its exact source text) → tree source. */
 export function svgSource(markup: string): { src: BinarySource; format: ImageFormat } {
   const withNs = /\sxmlns\s*=/.test(markup.slice(0, markup.indexOf('>'))) ? markup : markup.replace(/^<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
-  return { src: { data: Buffer.from(withNs, 'utf8').toString('base64') }, format: 'svg' };
+  return { src: { data: toBase64(utf8(withNs)) }, format: 'svg' };
 }

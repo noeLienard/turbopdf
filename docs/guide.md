@@ -391,7 +391,34 @@ await turbopdf.warmup(); // optional: load the engine before the first request
 | Node.js 20+, Bun, Deno | ✅ any OS, any CPU (native, or WebAssembly) |
 | Serverless (AWS Lambda, Vercel / Netlify functions, Cloud Run) | ✅ Linux x64 / arm64 binaries |
 | Docker, including Alpine | ✅ glibc and musl binaries |
-| Edge runtimes (Cloudflare Workers, Vercel Edge) | ❌ not yet: they need a WebAssembly build without `node:` APIs |
+| Edge runtimes and browsers | ✅ with `turbopdf/edge` (below) |
+
+### Edge runtimes and browsers
+
+`turbopdf/edge` is the same engine in WebAssembly with no Node API: Cloudflare Workers, Deno Deploy,
+Netlify Edge, Vercel Edge, or a browser page. Load the engine once, then use `create()` as usual.
+
+```ts
+import { init, create } from 'turbopdf/edge';
+import wasm from 'turbopdf/turbopdf.wasm'; // Cloudflare Workers / Wrangler
+
+export default {
+  async fetch() {
+    await init(wasm); // once; later calls reuse it
+    const pdf = await create({ markdown: '# Invoice 42' });
+    return pdf.toResponse({ filename: 'invoice.pdf' });
+  },
+};
+```
+
+`init()` also takes the bytes, a `fetch()` response or a URL (`init(new URL('/turbopdf.wasm', location.href))`
+in a browser). The PDF gives `toUint8Array()`, `toResponse()`, `preview()` and `toPng()` (each page:
+`toUint8Array()`, `toDataUrl()`); `save()`, `toBuffer()` and `toStream()` are Node-only. There is no file
+system: pass fonts as bytes (`fonts: [{ family, data }]`) and images as `data:` URLs.
+
+The engine is 4.3 MB gzipped: it fits Cloudflare Workers on the paid plan (10 MB) and Deno Deploy / Netlify
+Edge, but not the Cloudflare free plan (3 MB) or Vercel Edge Functions; on Vercel, use the Node.js runtime
+(native engine). Renders run on the calling thread, so `timeout` cannot interrupt one in progress.
 
 ## Security
 
