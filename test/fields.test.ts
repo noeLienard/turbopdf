@@ -22,6 +22,7 @@ describe('form fields', () => {
     expect(cgv.checked).toBe(false);
     expect(cgv.y).toBeGreaterThan(nom.y);
     expect(pays.options).toEqual(['FR', 'BE']);
+    expect(pays.optionLabels).toEqual(['France', 'Belgique']);
   });
 
   it('a View with a field, from components', async () => {

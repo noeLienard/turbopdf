@@ -119,9 +119,13 @@ value?: string,
  */
 checked?: boolean, 
 /**
- * Select: the choices.
+ * Select: the choices (their values).
  */
 options?: Array<string>, 
+/**
+ * Select: what each choice shows, when it differs from its value (`<option value="BE">Belgique</option>`).
+ */
+optionLabels?: Array<string>, 
 /**
  * Text: several lines (`<textarea>`).
  */
@@ -174,9 +178,13 @@ value?: string,
  */
 checked?: boolean, 
 /**
- * Select: the choices.
+ * Select: the choices (their values).
  */
 options?: Array<string>, 
+/**
+ * Select: what each choice shows, when it differs from its value (`<option value="BE">Belgique</option>`).
+ */
+optionLabels?: Array<string>, 
 /**
  * Text: several lines (`<textarea>`).
  */

@@ -410,9 +410,12 @@ pub struct FormField {
     /// Checkbox / radio: selected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checked: Option<bool>,
-    /// Select: the choices.
+    /// Select: the choices (their values).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub options: Option<Vec<String>>,
+    /// Select: what each choice shows, when it differs from its value (`<option value="BE">Belgique</option>`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub option_labels: Option<Vec<String>>,
     /// Text: several lines (`<textarea>`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multiline: Option<bool>,

@@ -101,6 +101,10 @@ fn html_controls_become_fields() {
         Some(&["France".to_string(), "BE".to_string()][..])
     );
     assert_eq!(
+        pays.field.option_labels.as_deref(),
+        Some(&["France".to_string(), "Belgique".to_string()][..])
+    );
+    assert_eq!(
         (pays.field.value.as_deref(), pays.field.label.as_deref()),
         (Some("BE"), Some("Pays"))
     );
