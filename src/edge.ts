@@ -49,8 +49,10 @@ export interface InitOptions {
 export function init(source: WasmSource, options: InitOptions = {}): Promise<void> {
   if (options.renderToStaticMarkup) reactRender = options.renderToStaticMarkup as (element: unknown) => string;
   ready ??= compile(source).then(
-    (module) => {
-      const engine = inThread(core(module));
+    async (module) => {
+      const c = core(module);
+      await c.ready(); // in a browser the instance is created asynchronously: the sync calls need it
+      const engine = inThread(c);
       setHost({ engine: () => engine, baseDir: () => undefined, react: async () => reactRender });
       return engine;
     },

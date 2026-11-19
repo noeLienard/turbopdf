@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - `pdf.toBlob()`: the PDF as an `application/pdf` Blob, to download it in a browser without a type cast.
+### Fixed
+
+- `turbopdf/edge` in browsers: `init()` failed with "WebAssembly.Instance is disallowed on the main thread, if
+  the buffer size is larger than 8MB" (Chrome). The engine is now instantiated asynchronously there.
+
+### Added (guide)
+
 - Guide: making the PDF in the browser, so the data never leaves the device. The CI renders a document in
   Chromium with `turbopdf/edge` and checks that rendering sends no request and that the PDF is byte-identical to
   the native engine's.
