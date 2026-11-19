@@ -39,6 +39,16 @@ impl Ctx {
                         "field_options",
                         "a select field needs options",
                     );
+                } else if f
+                    .option_labels
+                    .as_ref()
+                    .is_some_and(|l| l.len() != options.len())
+                {
+                    self.err(
+                        &format!("{path}/optionLabels"),
+                        "field_options",
+                        "`optionLabels` needs one label per option",
+                    );
                 } else if let Some(v) = &f.value
                     && !options.contains(v)
                 {
