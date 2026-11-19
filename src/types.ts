@@ -1,4 +1,4 @@
-import type { PdfA, Document as TreeDocument, Watermark } from './tree';
+import type { FieldBox, PdfA, Document as TreeDocument, Watermark } from './tree';
 
 export type Format = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
@@ -205,6 +205,12 @@ export interface EdgePdf {
   readonly pages: number;
   /** Problems detected while rendering. Never throws. */
   readonly warnings: Warning[];
+  /**
+   * The form fields (`<input>`, `<textarea>`, `<select>`, `<Field>`) and where they were laid out: page,
+   * position and size in points from the top-left corner. TurboPDF draws them; `@turbopdf/pro` makes
+   * them fillable.
+   */
+  readonly fields: FieldBox[];
   /** The PDF bytes. */
   toUint8Array(): Uint8Array;
   /** The PDF as a `Blob` (`application/pdf`): `URL.createObjectURL(pdf.toBlob())` to download it in a browser. */

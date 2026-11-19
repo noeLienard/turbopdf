@@ -22,6 +22,44 @@ struct Ctx {
 }
 
 impl Ctx {
+    fn field(&mut self, path: &str, f: &FormField) {
+        if f.name.trim().is_empty() {
+            self.err(
+                &format!("{path}/name"),
+                "field_name",
+                "a form field needs a name",
+            );
+        }
+        match f.kind {
+            FieldKind::Select => {
+                let options = f.options.as_deref().unwrap_or_default();
+                if options.is_empty() {
+                    self.err(
+                        &format!("{path}/options"),
+                        "field_options",
+                        "a select field needs options",
+                    );
+                } else if let Some(v) = &f.value
+                    && !options.contains(v)
+                {
+                    self.err(
+                        &format!("{path}/value"),
+                        "field_value",
+                        format!("the chosen value {v:?} is not one of the options"),
+                    );
+                }
+            }
+            FieldKind::Radio if f.value.as_deref().is_none_or(|v| v.trim().is_empty()) => {
+                self.err(
+                    &format!("{path}/value"),
+                    "field_value",
+                    "a radio button needs a value (what the group is set to when it is chosen)",
+                );
+            }
+            _ => {}
+        }
+    }
+
     fn err(&mut self, path: &str, code: &'static str, message: impl Into<String>) {
         self.errors.push(ValidationError {
             path: path.to_string(),
@@ -217,6 +255,9 @@ impl Ctx {
                 self.id(path, &v.id);
                 self.style(&format!("{path}/style"), &v.style);
                 self.link(&format!("{path}/link"), &v.link);
+                if let Some(f) = &v.field {
+                    self.field(&format!("{path}/field"), f);
+                }
                 self.nodes(&format!("{path}/children"), &v.children);
             }
             Node::Text(t) => {

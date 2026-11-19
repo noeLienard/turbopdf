@@ -29,7 +29,7 @@ export interface Handle {
 }
 
 export interface Core {
-  render(tree: string, options?: { baseDir?: string; buffers?: Uint8Array[] }): { handle: Handle; pages: number; warnings: string; pdf: Uint8Array };
+  render(tree: string, options?: { baseDir?: string; buffers?: Uint8Array[] }): { handle: Handle; pages: number; warnings: string; fields: string; pdf: Uint8Array };
   png(handle: Handle, scale: number): Uint8Array[];
   html(handle: Handle): { style: string; pages: { width: number; height: number; html: string }[] };
   release(handle: Handle): void;
@@ -172,7 +172,8 @@ export function core(module: WebAssembly.Module, files?: Files): Core {
         const handle = { id: r.u32(), generation };
         const pages = r.u32();
         const warnings = decoder.decode(r.bytes());
-        return { handle, pages, warnings, pdf: r.bytes().slice() };
+        const fields = decoder.decode(r.bytes());
+        return { handle, pages, warnings, fields, pdf: r.bytes().slice() };
       });
     },
     png(handle, scale) {
@@ -214,6 +215,7 @@ export function inThread(c: Core): import('./engine-api').NativeEngine {
       const doc = {
         pages: r.pages,
         warnings: r.warnings,
+        fields: r.fields,
         takePdf() {
           if (!pdf) throw fail('render_failed', 'the PDF was already taken');
           const out = pdf;

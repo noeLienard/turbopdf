@@ -8,7 +8,7 @@ export { close, configure, warmup } from './queue';
 export { engineInfo, type EngineInfo } from './rust/native';
 export { TurboPdfError } from './errors';
 export type { TurboPdfErrorCode } from './errors';
-export type { PdfA, Watermark } from './tree';
+export type { FieldBox, FieldKind, FormField, PdfA, Watermark } from './tree';
 export type {
   ConfigureOptions,
   CreateOptions,

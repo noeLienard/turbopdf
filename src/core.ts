@@ -6,6 +6,7 @@ import { withSlot } from './queue';
 import { isReactElement, renderPdf, type RenderResult } from './rust/engine';
 import type { CreateOptions, EdgePdf, EdgePngPage, EdgePreview, PngOptions, PreviewOptions, PreviewPage, ResponseOptions, Warning } from './types';
 import type { HtmlFromEngine } from './preview-types';
+import type { FieldBox } from './tree';
 
 const SOURCES = ['html', 'react', 'markdown', 'tree'] as const;
 
@@ -118,6 +119,7 @@ export function previewOf(p: HtmlFromEngine, meta: { title?: string; lang?: stri
 export class EdgePdfImpl<Png extends EdgePngPage = EdgePngPage, Html extends EdgePreview = EdgePreview> implements EdgePdf {
   readonly pages: number;
   readonly warnings: Warning[];
+  readonly fields: FieldBox[];
   protected readonly bytes: Uint8Array;
   private readonly r: RenderResult;
   private readonly png: (p: EdgePngPage) => Png;
@@ -132,6 +134,7 @@ export class EdgePdfImpl<Png extends EdgePngPage = EdgePngPage, Html extends Edg
     this.bytes = r.pdf;
     this.pages = r.pages;
     this.warnings = r.warnings;
+    this.fields = r.fields;
   }
 
   toUint8Array(): Uint8Array {

@@ -27,6 +27,8 @@ pub enum Op {
     },
     /// A clickable area.
     Link(LinkRect),
+    /// A form field's box.
+    Field(crate::FieldRect),
     /// A node with an `id` starts here.
     Anchor {
         name: String,
@@ -291,6 +293,18 @@ impl Paginator {
                 title: title.clone(),
                 y,
             });
+        }
+        if let Some(field) = n.meta.field {
+            let h = n.h.min(self.body_h - y).max(0.0);
+            if n.w > 0.0 && h > 0.0 {
+                self.push_op(Op::Field(crate::FieldRect {
+                    x,
+                    y,
+                    w: n.w,
+                    h,
+                    field,
+                }));
+            }
         }
         if let Some(link) = n.meta.link {
             let h = n.h.min(self.body_h - y).max(0.0);

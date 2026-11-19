@@ -209,6 +209,35 @@ impl Prepared {
         self.layout.pages.len() as u32
     }
 
+    /// The form fields, where they were laid out (for TurboPDF Pro to make them fillable).
+    pub fn fields(&self) -> Vec<turbopdf_tree::FieldBox> {
+        let hex = |c: [u8; 4]| format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2]);
+        let l = &self.layout;
+        l.pages
+            .iter()
+            .enumerate()
+            .flat_map(|(i, p)| {
+                p.fields.iter().map(move |r| {
+                    let f = &l.fields[r.field as usize];
+                    turbopdf_tree::FieldBox {
+                        field: f.field.clone(),
+                        page: i as u32 + 1,
+                        x: r.x,
+                        y: r.y,
+                        width: r.w,
+                        height: r.h,
+                        page_width: p.width,
+                        page_height: p.height,
+                        font_size: f.font_size,
+                        color: hex(f.color),
+                        background: f.background.map(hex),
+                        border_width: f.border_width,
+                    }
+                })
+            })
+            .collect()
+    }
+
     pub fn warnings(&self) -> &[Warning] {
         &self.layout.warnings
     }

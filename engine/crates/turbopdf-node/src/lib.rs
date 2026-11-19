@@ -172,6 +172,12 @@ impl NativeDocument {
         self.warnings.clone()
     }
 
+    /// JSON array of the form fields and where they were laid out (`FieldBox` in tree.ts).
+    #[napi(getter)]
+    pub fn fields(&self) -> String {
+        serde_json::to_string(&self.prepared.fields()).expect("fields serialize")
+    }
+
     /// The PDF bytes. Handed over without a copy, so it can be taken only once.
     #[napi]
     pub fn take_pdf(&mut self) -> Result<Buffer> {

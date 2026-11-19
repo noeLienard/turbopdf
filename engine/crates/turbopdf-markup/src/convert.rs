@@ -3,8 +3,8 @@
 //! Two vocabularies are understood:
 //! * TurboPDF components (`turbopdf/components`) render `<turbopdf-*>` elements whose `data-p` attribute
 //!   holds their props as JSON: they map 1:1 to tree nodes.
-//! * HTML (div, p, h1–h6, span/b/i, a, img, svg, table, ul/ol, hr, br), with its cascaded CSS: mapped to
-//!   the closest tree nodes.
+//! * HTML (div, p, h1–h6, span/b/i, a, img, svg, table, ul/ol, hr, br, input/textarea/select), with its
+//!   cascaded CSS: mapped to the closest tree nodes.
 
 use crate::cascade::Computed;
 use crate::dom::{Data, Dom, Element, Id};
@@ -22,6 +22,7 @@ use turbopdf_tree::{
 };
 
 mod float;
+mod form;
 mod table;
 
 const INLINE: &[&str] = &[
@@ -238,7 +239,7 @@ impl<'a> Converter<'a> {
         }
         let tag = self.tag(id);
         INLINE.contains(&tag)
-            && !(tag == "a"
+            && !((tag == "a" || tag == "label")
                 && self
                     .dom
                     .children(id)
@@ -704,6 +705,12 @@ impl<'a> Converter<'a> {
                 vec![view(vec![], Some(s), Some(Role::Artifact))]
             }
             "ul" | "ol" => vec![self.list(id)],
+            "input" | "textarea" | "select" => self.form_control(id),
+            // a label around a control: side by side, as a browser lays them out inline
+            "label" => {
+                let kids = self.blocks(&children, true);
+                vec![self.label_row(id, kids)]
+            }
             "script" | "style" | "head" | "title" | "meta" | "link" | "template" | "noscript" => {
                 vec![]
             }

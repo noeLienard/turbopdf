@@ -302,6 +302,26 @@ the render (give one to get the same bytes on every run). What the level forbids
 problems in `details` (e.g. a character no font has, transparency in PDF/A-1). The CI validates every level with
 [veraPDF](https://verapdf.org), the reference validator.
 
+### Forms
+
+`<input>`, `<textarea>`, `<select>`, checkboxes and radios are drawn like a browser draws them (a bordered box
+with the value or the placeholder; CSS restyles them), and `pdf.fields` says where each one was laid out:
+
+```ts
+const pdf = await turbopdf.create({
+  html: `<label>Nom <input name="nom" required></label>
+         <label><input type="checkbox" name="cgv"> J'accepte les CGV</label>`,
+});
+pdf.fields;
+// [{ name: 'nom', kind: 'text', required: true, label: 'Nom', page: 1, x: 56.7, y: 70.2, width: 160, height: 19.4, … },
+//  { name: 'cgv', kind: 'checkbox', checked: false, value: 'on', label: "J'accepte les CGV", page: 1, … }]
+```
+
+Positions are in points from the top-left corner of the page. A control needs a `name` (or an `id`) to be
+reported. With components, any box can be a field: `<View field={{ name: 'signature', kind: 'signature' }}>`
+(kinds: `text`, `checkbox`, `radio`, `select`, `signature`). The fields are drawn, not fillable: making them
+fillable PDF form fields (AcroForm) is part of `@turbopdf/pro`.
+
 ## Download
 
 ```ts

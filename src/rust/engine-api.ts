@@ -7,6 +7,8 @@ export interface NativeDocument {
   readonly pages: number;
   /** JSON array of the engine's warnings. */
   readonly warnings: string;
+  /** JSON array of the form fields and where they were laid out (absent from engines older than 0.3). */
+  readonly fields?: string;
   /** The PDF bytes, handed over without a copy: only once. */
   takePdf(): Uint8Array;
   png(scale?: number): Promise<Uint8Array[]>;
