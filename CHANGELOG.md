@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com), and the project follows [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- Guide: making the PDF in the browser, so the data never leaves the device. The CI renders a document in
+  Chromium with `turbopdf/edge` and checks that rendering sends no request and that the PDF is byte-identical to
+  the native engine's.
+
 ## 0.2.2 — 2026-11-16
 
 ### Fixed
