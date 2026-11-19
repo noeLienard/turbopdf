@@ -45,13 +45,13 @@ rustybuzz  = "0.20"
 hypher     = "0.1"
 krilla     = { version = "0.8", default-features = false, features = ["raster-images"] }
 tiny-skia  = "0.12"
-base64     = "0.22"
+base64     = "0.23"
 # HTML input: the WHATWG parser of Servo
 html5ever  = "0.40"
 jpeg-decoder = { version = "0.3", default-features = false }
 # SVG: parsed once (usvg), drawn as vectors in the PDF (krilla-svg) and rasterized for previews (resvg).
-usvg       = { version = "0.47", default-features = false, features = ["text"] }
-resvg      = { version = "0.47", default-features = false, features = ["text"] }
+usvg       = { version = "0.50", default-features = false, features = ["text"] }
+resvg      = { version = "0.50", default-features = false, features = ["text"] }
 krilla-svg = "0.8"
 image-webp = "0.2"
 gif        = "0.14"
