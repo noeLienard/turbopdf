@@ -57,6 +57,7 @@ impl Converter<'_> {
             value: None,
             checked: None,
             options: None,
+            option_labels: None,
             multiline: None,
             required,
             read_only,
@@ -75,6 +76,9 @@ impl Converter<'_> {
                 let chosen = options.iter().find(|o| o.selected).or(options.first());
                 field.value = chosen.map(|o| o.value.clone());
                 let shown = chosen.map(|o| o.text.clone()).unwrap_or_default();
+                if options.iter().any(|o| o.text != o.value) {
+                    field.option_labels = Some(options.iter().map(|o| o.text.clone()).collect());
+                }
                 field.options = Some(options.into_iter().map(|o| o.value).collect());
                 (vec![plain(nbsp(shown), None)], text_box(None))
             }
