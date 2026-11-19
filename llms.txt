@@ -19,6 +19,7 @@ This file is for AI coding assistants. It is the whole API in one page. Full gui
 - Edge runtimes / browsers: `import { init, create } from 'turbopdf/edge'`, `await init(wasm)` once (wasm = `turbopdf/turbopdf.wasm`, its bytes or a URL), then `create()` (React: `init(wasm, { renderToStaticMarkup })` from `react-dom/server`); output with `toUint8Array()` / `toResponse()` (no `save`, no files: fonts as bytes, images as data: URLs).
 - Serverless (Vercel, Lambda, Next.js): nothing to configure; `serverExternalPackages: ['turbopdf']` in Next.js, `void turbopdf.warmup()` at module scope, `turbopdf.engineInfo()` tells native or wasm (and `fallbackReason`).
 - In the browser (data never leaves the device): `turbopdf/edge` in a client component, `init('/turbopdf.wasm')` (copy node_modules/turbopdf/wasm/turbopdf.wasm to public/), `create()`, then `URL.createObjectURL(pdf.toBlob())` to download.
+- Archiving: `pdfa: '3b'` (or `'2b'`, `'2u'`, `'3a'`…) gives PDF/A; it throws `not_pdfa` when the document cannot conform. Combine `pdfa: '3a'` with `pdfua: true` for both.
 - Problems are **returned** in `pdf.warnings`, not thrown. Check them, or pass `strict: true` to throw.
 
 ## Create

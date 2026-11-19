@@ -6,17 +6,21 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- `pdfa` option: PDF/A for long-term archiving, levels `1b` `1a` `2b` `2u` `2a` `3b` `3u` `3a` `4` (also
+  `<Document pdfa>` and `pdfa` in the tree). Fonts and colors embedded, sRGB output intent, XMP metadata, no
+  interpolated images; combines with `pdfua`. A document that cannot conform throws `not_pdfa` with the
+  problems. The CI validates every level, and PDF/UA, with veraPDF.
 - `pdf.toBlob()`: the PDF as an `application/pdf` Blob, to download it in a browser without a type cast.
+- Guide: making the PDF in the browser, so the data never leaves the device. The CI renders a document in
+  Chromium with `turbopdf/edge` and checks that rendering sends no request and that the PDF is byte-identical to
+  the native engine's.
+
 ### Fixed
 
 - `turbopdf/edge` in browsers: `init()` failed with "WebAssembly.Instance is disallowed on the main thread, if
   the buffer size is larger than 8MB" (Chrome). The engine is now instantiated asynchronously there.
-
-### Added (guide)
-
-- Guide: making the PDF in the browser, so the data never leaves the device. The CI renders a document in
-  Chromium with `turbopdf/edge` and checks that rendering sends no request and that the PDF is byte-identical to
-  the native engine's.
+- `turbopdf/components` and `turbopdf/tree` failed to load in browsers ("fileURLToPath is not a function"):
+  they no longer carry Node shims.
 
 ## 0.2.2 — 2026-11-16
 

@@ -121,6 +121,13 @@ fn engine_error(e: EngineError) -> Error {
             );
             fail("not_accessible", message, Some(json!(problems)))
         }
+        EngineError::Pdf(turbopdf_engine::turbopdf_pdf::PdfError::Archival(standard, problems)) => {
+            let message = format!(
+                "The PDF cannot be {standard} conformant: {}. Fix these, or drop the `pdfa` option.",
+                problems.join("; ")
+            );
+            fail("not_pdfa", message, Some(json!(problems)))
+        }
         e => fail("render_failed", e.to_string(), None),
     }
 }

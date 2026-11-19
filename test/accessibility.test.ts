@@ -111,3 +111,47 @@ describe('PDF/UA', () => {
     });
   });
 });
+
+describe('PDF/A', () => {
+  it('pdfa: a PDF/A document, with the date and the sRGB output intent', async () => {
+    for (const [level, part, conformance] of [['2b', '2', 'B'], ['3b', '3', 'B'], ['3a', '3', 'A'], ['2u', '2', 'U']] as const) {
+      const pdf = await turbopdf.create({ html: REPORT, pdfa: level });
+      expect(pdf.warnings).toEqual([]);
+      expect(raw(pdf)).toContain(`<pdfaid:part>${part}</pdfaid:part>`);
+      expect(raw(pdf)).toContain(`<pdfaid:conformance>${conformance}</pdfaid:conformance>`);
+      expect(raw(pdf)).toContain('/OutputIntents');
+    }
+  });
+
+  it('a given creation date gives the same bytes on every run; without one, it is now', async () => {
+    const make = () => turbopdf.create(h(Document, { pdfa: '3b', creationDate: '2026-11-19T10:00:00Z', title: 'F' }, h(Page, null, h(Text, null, 'Facture'))));
+    expect((await make()).toBuffer().equals((await make()).toBuffer())).toBe(true);
+    expect(raw(await make())).toContain('2026-11-19T10:00:00');
+    const year = String(new Date().getUTCFullYear());
+    expect(raw(await turbopdf.create({ html: '<p>x</p>', pdfa: '2b' }))).toContain(`<xmp:CreateDate>${year}`);
+  });
+
+  it('PDF/A and PDF/UA together', async () => {
+    const pdf = await turbopdf.create({ html: REPORT, pdfa: '3a', pdfua: true });
+    expect(raw(pdf)).toContain('pdfuaid:part');
+    expect(raw(pdf)).toContain('<pdfaid:part>3</pdfaid:part>');
+  });
+
+  it('wrong combinations are refused before rendering', async () => {
+    await expect(turbopdf.create({ html: '<p>x</p>', pdfa: '5z' as never })).rejects.toMatchObject({ code: 'invalid_source', message: expect.stringContaining("'3b'") });
+    await expect(turbopdf.create({ html: '<p>x</p>', pdfa: '3a', tagged: false })).rejects.toMatchObject({ code: 'invalid_source', message: expect.stringContaining('tagged') });
+    await expect(turbopdf.create({ html: REPORT, pdfa: '1b', pdfua: true })).rejects.toMatchObject({ code: 'invalid_source', message: expect.stringContaining('PDF/A-1') });
+  });
+
+  it('what PDF/A forbids: not_pdfa, with the problems', async () => {
+    await expect(turbopdf.create({ html: '<div style="height:20px;background:rgba(255,0,0,.5)"></div>', pdfa: '1b' })).rejects.toMatchObject({
+      code: 'not_pdfa',
+      message: expect.stringContaining('PDF/A-1b'),
+      details: [expect.stringContaining('transparency')],
+    });
+    await expect(turbopdf.create({ html: '<p>漢字</p>', pdfa: '2b' })).rejects.toMatchObject({
+      code: 'not_pdfa',
+      details: [expect.stringContaining('characters in no font: 漢 字')],
+    });
+  });
+});

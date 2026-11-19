@@ -6,7 +6,7 @@
 // Hooks, context and your own components work as usual: React does the rendering.
 import { createElement, type ReactNode } from 'react';
 import { imageBytes, imageSource } from './rust/images';
-import type { Color, Column, Dimension, Edges, ObjectFit, PageFormat, Role, Style, TextStyle, Watermark } from './tree';
+import type { Color, Column, Dimension, Edges, ObjectFit, PageFormat, PdfA, Role, Style, TextStyle, Watermark } from './tree';
 
 export type { Style, TextStyle, Column, Role, Watermark } from './tree';
 
@@ -32,6 +32,8 @@ export interface DocumentProps extends Children {
   tagged?: boolean;
   /** PDF/UA-1 conformance: needs `title` and `lang`. Default false. */
   pdfua?: boolean;
+  /** PDF/A conformance level (`'2b'`, `'3b'`, `'3a'`…): see the `pdfa` option. */
+  pdfa?: PdfA;
 }
 
 /** Root of the document: metadata, and one or more `<Page>`. */

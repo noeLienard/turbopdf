@@ -1,4 +1,4 @@
-import type { Document as TreeDocument, Watermark } from './tree';
+import type { PdfA, Document as TreeDocument, Watermark } from './tree';
 
 export type Format = 'A3' | 'A4' | 'A5' | 'Letter' | 'Legal';
 export type Orientation = 'portrait' | 'landscape';
@@ -77,6 +77,14 @@ interface BaseOptions {
    * with a `missing_alt` warning. Throws `not_accessible` when the PDF cannot conform. Default: false.
    */
   pdfua?: boolean;
+  /**
+   * Conform to PDF/A (ISO 19005), for long-term archiving: invoices, payslips, contracts. `'2b'` or `'3b'` suit
+   * most documents (`'3b'` is the base of Factur-X); `'2a'` / `'3a'` are also tagged and accessible, `'2u'` /
+   * `'3u'` guarantee extractable text. PDF/A-1 (`'1b'`, `'1a'`) forbids transparency. Throws `not_pdfa` when
+   * the PDF cannot conform. PDF/A needs a creation date: `<Document creationDate>`, or now (set one for
+   * identical bytes on every run). Default: none.
+   */
+  pdfa?: PdfA;
 
   /** Throw a `warnings_found` error instead of returning warnings. Default: false. */
   strict?: boolean;

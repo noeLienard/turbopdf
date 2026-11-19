@@ -28,4 +28,12 @@ jobs:
         run: npm run test:wasm
       - name: In a real browser (Chromium), offline and byte-identical to the native engine
         run: node scripts/browser-smoke/run.mjs
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: PDF/A and PDF/UA conformance, checked by veraPDF
+        run: |
+          scripts/install-verapdf.sh "$RUNNER_TEMP/verapdf"
+          VERAPDF="$RUNNER_TEMP/verapdf/verapdf" node scripts/check-pdfa.mjs
       - run: npm pack --dry-run

@@ -56,6 +56,13 @@ fn engine_error(e: EngineError) -> Vec<u8> {
             );
             error_json("not_accessible", message, Some(json!(problems)))
         }
+        EngineError::Pdf(turbopdf_engine::turbopdf_pdf::PdfError::Archival(standard, problems)) => {
+            let message = format!(
+                "The PDF cannot be {standard} conformant: {}. Fix these, or drop the `pdfa` option.",
+                problems.join("; ")
+            );
+            error_json("not_pdfa", message, Some(json!(problems)))
+        }
         e => error_json("render_failed", e.to_string(), None),
     }
 }

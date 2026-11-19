@@ -393,6 +393,33 @@ pub fn validate(doc: &Document) -> Result<(), Vec<ValidationError>> {
             );
         }
     }
+    if let Some(a) = doc.pdfa {
+        let date = doc.meta.as_ref().and_then(|m| m.creation_date.as_deref());
+        if date.is_none_or(|d| d.trim().is_empty()) {
+            c.err(
+                "/meta/creationDate",
+                "pdfa_date",
+                format!(
+                    "{} needs a creation date: set meta.creationDate (ISO 8601)",
+                    a.name()
+                ),
+            );
+        }
+        if a.needs_tagging() && doc.tagged == Some(false) {
+            c.err(
+                "/tagged",
+                "pdfa_untagged",
+                format!("{} documents are tagged: remove tagged: false", a.name()),
+            );
+        }
+        if matches!(a, PdfA::A1a | PdfA::A1b) && doc.pdfua == Some(true) {
+            c.err(
+                "/pdfa",
+                "pdfa_pdfua",
+                "PDF/A-1 (PDF 1.4) cannot be combined with PDF/UA-1 (PDF 1.7): use PDF/A-2 or later",
+            );
+        }
+    }
     c.style("/defaultStyle", &doc.default_style);
     for (i, f) in doc.fonts.as_deref().unwrap_or_default().iter().enumerate() {
         c.font(

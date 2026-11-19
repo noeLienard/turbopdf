@@ -44,6 +44,7 @@ fn pdf_options(doc: &Document) -> turbopdf_pdf::PdfOptions {
     turbopdf_pdf::PdfOptions {
         tagged: doc.tagged.unwrap_or(true),
         pdfua: doc.pdfua == Some(true),
+        pdfa: doc.pdfa,
     }
 }
 

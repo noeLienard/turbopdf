@@ -27,7 +27,7 @@ export function nativeError(e: unknown): TurboPdfError {
   const raw = e instanceof Error ? e.message : String(e);
   try {
     const { code, message, details } = JSON.parse(raw) as { code: string; message: string; details?: unknown };
-    const known = code === 'invalid_tree' || code === 'font_failed' || code === 'not_accessible' || code === 'invalid_option' ? (code === 'invalid_option' ? 'invalid_source' : code) : 'render_failed';
+    const known = code === 'invalid_tree' || code === 'font_failed' || code === 'not_accessible' || code === 'not_pdfa' || code === 'invalid_option' ? (code === 'invalid_option' ? 'invalid_source' : code) : 'render_failed';
     const err = new TurboPdfError(known, message, { cause: e });
     if (details !== undefined) err.details = details;
     return err;
