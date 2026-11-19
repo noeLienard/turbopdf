@@ -28,7 +28,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 20
@@ -58,7 +58,7 @@ jobs:
     container: node:20-alpine
     steps:
       - run: apk add --no-cache bash curl build-base git
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Install Rust
         shell: bash
         run: |
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 20
@@ -94,7 +94,7 @@ jobs:
     needs: [native, musl, wasm]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 20
@@ -139,7 +139,7 @@ jobs:
           - { os: ubuntu-22.04, engine: wasm, target: '' }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/smoke.mjs
       - uses: actions/setup-node@v7
@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     container: node:20-alpine
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/smoke.mjs
       - uses: actions/download-artifact@v5
@@ -185,7 +185,7 @@ jobs:
     name: install on Bun and Deno (wasm)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/smoke.mjs
       - uses: actions/setup-node@v7
@@ -208,7 +208,7 @@ jobs:
     name: install on Cloudflare workerd (turbopdf/edge)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/edge-smoke
       - uses: actions/setup-node@v7
@@ -234,7 +234,7 @@ jobs:
         image: ['amazonlinux:2023', 'public.ecr.aws/lambda/nodejs:22', 'node:22-bullseye']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/smoke-native.mjs
       - uses: actions/setup-node@v7
@@ -261,7 +261,7 @@ jobs:
     name: Next.js standalone on Amazon Linux 2023
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/next-smoke
       - uses: actions/setup-node@v7
