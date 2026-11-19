@@ -370,7 +370,62 @@ pub struct View {
     /// What the box is (list, list item, section…), for tagged PDF.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<Role>,
+    /// A form field occupies this box. The box is drawn as styled (with its children, e.g. the value), and
+    /// its place is reported in the render output (`fields`), where TurboPDF Pro makes it fillable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field: Option<FormField>,
     pub children: Vec<Node>,
+}
+
+/// What kind of form field.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "tree.ts"))]
+pub enum FieldKind {
+    Text,
+    Checkbox,
+    /// One choice of a group: radios share a `name`, each has its own `value`.
+    Radio,
+    /// A list of `options` (a drop-down).
+    Select,
+    /// An empty signature field, to be signed later.
+    Signature,
+}
+
+/// A form field: `<input>`, `<textarea>`, `<select>` in HTML, `<Field>` in components.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "tree.ts", optional_fields)
+)]
+pub struct FormField {
+    /// The field name (unique, except radios of one group).
+    pub name: String,
+    pub kind: FieldKind,
+    /// Text: the initial text. Select: the chosen option. Radio / checkbox: the value when selected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    /// Checkbox / radio: selected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checked: Option<bool>,
+    /// Select: the choices.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+    /// Text: several lines (`<textarea>`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiline: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_only: Option<bool>,
+    /// Text: at most this many characters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_length: Option<u32>,
+    /// What the field is for, read by screen readers (`<label>`, `aria-label`, `title`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 /// Plain string or a list of styled spans.

@@ -10,6 +10,9 @@ All notable changes to this project are documented here. The format follows [Kee
   `<Document pdfa>` and `pdfa` in the tree). Fonts and colors embedded, sRGB output intent, XMP metadata, no
   interpolated images; combines with `pdfua`. A document that cannot conform throws `not_pdfa` with the
   problems. The CI validates every level, and PDF/UA, with veraPDF.
+- Forms: `<input>`, `<textarea>`, `<select>`, checkboxes and radios are drawn like a browser draws them, and
+  `pdf.fields` reports each field (name, kind, value, options, label…) with its page, position and size. With
+  components, `<View field={…}>` makes any box a field (also `field` on `view` nodes in the tree).
 - `pdf.toBlob()`: the PDF as an `application/pdf` Blob, to download it in a browser without a type cast.
 - Guide: making the PDF in the browser, so the data never leaves the device. The CI renders a document in
   Chromium with `turbopdf/edge` and checks that rendering sends no request and that the PDF is byte-identical to

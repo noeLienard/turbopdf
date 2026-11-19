@@ -58,6 +58,7 @@ export function wasmEngine(wasm: Uint8Array<ArrayBuffer>, script: string | undef
       const doc: NativeDocument = {
         pages: r.pages,
         warnings: r.warnings,
+        fields: r.fields,
         takePdf() {
           if (!pdf) throw new Error(JSON.stringify({ code: 'render_failed', message: 'the PDF was already taken' }));
           const out = pdf;

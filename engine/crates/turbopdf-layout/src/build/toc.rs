@@ -29,6 +29,7 @@ pub(super) fn toc_view(toc: &t::TableOfContents, entries: &[TocEntry]) -> t::Nod
                 keep_together: None,
                 link: Some(format!("#{}", e.anchor)),
                 role: Some(t::Role::TocItem),
+                field: None,
                 children: vec![
                     t::Node::Text(t::Text {
                         id: None,
@@ -60,6 +61,7 @@ pub(super) fn toc_view(toc: &t::TableOfContents, entries: &[TocEntry]) -> t::Nod
         keep_together: None,
         link: None,
         role: Some(t::Role::Toc),
+        field: None,
         children: rows,
     })
 }

@@ -44,6 +44,8 @@ pub struct Cx<'a> {
     pub svg_fonts: Option<Arc<usvg::fontdb::Database>>,
     /// PDF/UA: images without `alt` are made decorative (with a warning).
     pub pdfua: bool,
+    /// Form fields, in document order; boxes refer to them by index.
+    pub fields: Vec<crate::FieldInfo>,
 }
 
 #[derive(Clone, Debug)]
@@ -74,6 +76,8 @@ pub struct NodeMeta {
     pub heading: Option<(u8, String)>,
     /// The whole box is clickable.
     pub link: Option<u32>,
+    /// A form field occupies the box (index into [`Cx::fields`]).
+    pub field: Option<u32>,
     /// `position: absolute`: out of the flow.
     pub absolute: bool,
     /// Structure element of the node (tagged PDF); `None`: a plain group, its content goes to the parent.
@@ -317,9 +321,25 @@ impl State<'_, '_> {
                 let st = v.style.clone().unwrap_or_default();
                 let inh2 = inherit(inh, Some(&st));
                 let (role, artifact) = role_of(v.role, None);
+                let field = v.field.as_ref().map(|f| {
+                    self.cx.fields.push(crate::FieldInfo {
+                        field: f.clone(),
+                        font_size: inh2.size,
+                        color: inh2.color,
+                        background: st
+                            .background_color
+                            .filter(|c| c.a > 0)
+                            .map(crate::style::rgba),
+                        border_width: crate::style::border_widths(&st)
+                            .into_iter()
+                            .fold(0.0, f32::max),
+                    });
+                    (self.cx.fields.len() - 1) as u32
+                });
                 let meta = NodeMeta {
                     anchor: v.id.clone(),
                     link: v.link.as_deref().map(|l| self.cx.link_id(l)),
+                    field,
                     absolute: is_absolute(&st),
                     role,
                     artifact,

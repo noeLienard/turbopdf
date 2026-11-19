@@ -58,3 +58,33 @@ pub enum Warning {
         target: String,
     },
 }
+
+/// Where a form field was laid out (points, from the top-left corner of its page), with what a viewer needs
+/// to draw it as an interactive field.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "tree.ts", optional_fields)
+)]
+pub struct FieldBox {
+    #[serde(flatten)]
+    #[cfg_attr(feature = "ts", ts(flatten))]
+    pub field: crate::FormField,
+    /// 1-based.
+    pub page: u32,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub page_width: f32,
+    pub page_height: f32,
+    /// Text size and color of the box (points, `#rrggbb`).
+    pub font_size: f32,
+    pub color: String,
+    /// The box's background (`#rrggbb`, absent: transparent) and border width (points).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background: Option<String>,
+    pub border_width: f32,
+}

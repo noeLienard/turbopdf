@@ -3,7 +3,7 @@ import type { HtmlFromEngine } from '../preview-types';
 import { TurboPdfError } from '../errors';
 import { FORMATS, normalizeMargin, toPx } from '../formats';
 import { holdSlotUntil } from '../queue';
-import type { Document, Edges, FontFace, Node, Page, PageSize, PdfA, Warning as TreeWarning, Watermark } from '../tree';
+import type { Document, Edges, FieldBox, FontFace, Node, Page, PageSize, PdfA, Warning as TreeWarning, Watermark } from '../tree';
 import type { CreateOptions, Format, ReactElementLike, Warning } from '../types';
 import { markdownToNodes } from './markdown';
 import { toBase64 } from '../bytes';
@@ -301,6 +301,7 @@ export interface RenderResult {
   pdf: Uint8Array;
   pages: number;
   warnings: Warning[];
+  fields: FieldBox[];
   png(scale: number): Promise<Uint8Array[]>;
   html(): Promise<HtmlFromEngine>;
   meta: { title?: string; lang?: string };
@@ -332,6 +333,7 @@ export function renderPdf(o: CreateOptions): Promise<RenderResult> {
           .filter((w) => !(w.type === 'image_failed' && [...downloaded].some((u) => w.reason.startsWith(`${u} is remote`))))
           .map(toWarning),
       ],
+      fields: JSON.parse(rendered.fields ?? '[]') as FieldBox[],
       // drawn from the layout above: the document is not parsed or laid out again
       png: (scale) => rendered.png(scale).catch(fail),
       html: () =>

@@ -1270,6 +1270,7 @@ dependencies = [
  "turbopdf-fonts",
  "turbopdf-html",
  "turbopdf-layout",
+ "turbopdf-markup",
  "turbopdf-pdf",
  "turbopdf-raster",
  "turbopdf-text",

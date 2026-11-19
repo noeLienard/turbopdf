@@ -89,6 +89,57 @@ export type EdgeSides = { top?: number, right?: number, bottom?: number, left?: 
  */
 export type Edges = number | EdgeSides;
 
+/**
+ * Where a form field was laid out (points, from the top-left corner of its page), with what a viewer needs
+ * to draw it as an interactive field.
+ */
+export type FieldBox = { 
+/**
+ * 1-based.
+ */
+page: number, x: number, y: number, width: number, height: number, pageWidth: number, pageHeight: number, 
+/**
+ * Text size and color of the box (points, `#rrggbb`).
+ */
+fontSize: number, color: string, 
+/**
+ * The box's background (`#rrggbb`, absent: transparent) and border width (points).
+ */
+background?: string, borderWidth: number, 
+/**
+ * The field name (unique, except radios of one group).
+ */
+name: string, kind: FieldKind, 
+/**
+ * Text: the initial text. Select: the chosen option. Radio / checkbox: the value when selected.
+ */
+value?: string, 
+/**
+ * Checkbox / radio: selected.
+ */
+checked?: boolean, 
+/**
+ * Select: the choices.
+ */
+options?: Array<string>, 
+/**
+ * Text: several lines (`<textarea>`).
+ */
+multiline?: boolean, required?: boolean, readOnly?: boolean, 
+/**
+ * Text: at most this many characters.
+ */
+maxLength?: number, 
+/**
+ * What the field is for, read by screen readers (`<label>`, `aria-label`, `title`).
+ */
+label?: string, };
+
+/**
+ * What kind of form field.
+ */
+export type FieldKind = "text" | "checkbox" | "radio" | "select" | "signature";
+
 export type FlexDirection = "row" | "row-reverse" | "column" | "column-reverse";
 
 export type FlexWrap = "nowrap" | "wrap";
@@ -105,6 +156,39 @@ export type FontStyle = "normal" | "italic";
  * `tabular-nums`: every digit as wide as the others, so amounts line up in columns.
  */
 export type FontVariantNumeric = "normal" | "tabular-nums";
+
+/**
+ * A form field: `<input>`, `<textarea>`, `<select>` in HTML, `<Field>` in components.
+ */
+export type FormField = { 
+/**
+ * The field name (unique, except radios of one group).
+ */
+name: string, kind: FieldKind, 
+/**
+ * Text: the initial text. Select: the chosen option. Radio / checkbox: the value when selected.
+ */
+value?: string, 
+/**
+ * Checkbox / radio: selected.
+ */
+checked?: boolean, 
+/**
+ * Select: the choices.
+ */
+options?: Array<string>, 
+/**
+ * Text: several lines (`<textarea>`).
+ */
+multiline?: boolean, required?: boolean, readOnly?: boolean, 
+/**
+ * Text: at most this many characters.
+ */
+maxLength?: number, 
+/**
+ * What the field is for, read by screen readers (`<label>`, `aria-label`, `title`).
+ */
+label?: string, };
 
 export type Heading = { id?: string, 
 /**
@@ -418,7 +502,12 @@ link?: string,
 /**
  * What the box is (list, list item, section…), for tagged PDF.
  */
-role?: Role, children: Array<Node>, };
+role?: Role, 
+/**
+ * A form field occupies this box. The box is drawn as styled (with its children, e.g. the value), and
+ * its place is reported in the render output (`fields`), where TurboPDF Pro makes it fillable.
+ */
+field?: FormField, children: Array<Node>, };
 
 /**
  * A precise, non-fatal problem found while rendering. `path` is a JSON Pointer into the

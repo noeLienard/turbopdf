@@ -6,9 +6,9 @@
 // Hooks, context and your own components work as usual: React does the rendering.
 import { createElement, type ReactNode } from 'react';
 import { imageBytes, imageSource } from './rust/images';
-import type { Color, Column, Dimension, Edges, ObjectFit, PageFormat, PdfA, Role, Style, TextStyle, Watermark } from './tree';
+import type { Color, Column, Dimension, Edges, FormField, ObjectFit, PageFormat, PdfA, Role, Style, TextStyle, Watermark } from './tree';
 
-export type { Style, TextStyle, Column, Role, Watermark } from './tree';
+export type { Style, TextStyle, Column, Role, Watermark, FormField, FieldKind } from './tree';
 
 type Children = { children?: ReactNode };
 
@@ -76,6 +76,12 @@ export interface ViewProps extends Children {
   /** What the box is for screen readers: `list`, `list_item`, `section`, `artifact` (decorative)… */
   role?: Role;
   id?: string;
+  /**
+   * A form field occupies this box: it is drawn as styled, and reported in `pdf.fields` with its place,
+   * for `@turbopdf/pro` to make it fillable. E.g. an empty signature box:
+   * `<View style={{ width: 200, height: 60, border: … }} field={{ name: 'signature', kind: 'signature' }} />`.
+   */
+  field?: FormField;
 }
 
 /** A flexbox container (column by default). */

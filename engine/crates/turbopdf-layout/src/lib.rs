@@ -226,6 +226,29 @@ pub struct PageLayout {
     /// One per op.
     pub tags: Vec<Tag>,
     pub links: Vec<LinkRect>,
+    /// Form fields on this page, in document order.
+    pub fields: Vec<FieldRect>,
+}
+
+/// Where a form field was laid out on its page (points, top-left origin).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FieldRect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    /// Index into [`Layout::fields`].
+    pub field: u32,
+}
+
+/// A form field and the look of its box.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FieldInfo {
+    pub field: turbopdf_tree::FormField,
+    pub font_size: f32,
+    pub color: Rgba,
+    pub background: Option<Rgba>,
+    pub border_width: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -274,6 +297,8 @@ pub struct Layout {
     pub outline: Vec<OutlineEntry>,
     /// Structure tree (tagged PDF), indexed by [`Tag::Content::elem`].
     pub structure: Vec<StructElem>,
+    /// Form fields, referred to by [`FieldRect::field`].
+    pub fields: Vec<FieldInfo>,
 }
 
 #[derive(Debug, thiserror::Error)]

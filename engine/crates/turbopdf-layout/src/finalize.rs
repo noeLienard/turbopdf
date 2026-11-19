@@ -6,8 +6,8 @@ use crate::build::{
 use crate::paginate::{Op, Paginator, Structure};
 use crate::style::{Inherited, inherit, rgba};
 use crate::{
-    Anchor, ArtifactKind, DrawOp, Layout, LayoutError, LinkRect, OutlineEntry, PageLayout, Tag,
-    Visual,
+    Anchor, ArtifactKind, DrawOp, FieldRect, Layout, LayoutError, LinkRect, OutlineEntry,
+    PageLayout, Tag, Visual,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use turbopdf_fonts::{FontDb, ResourceLoader};
@@ -233,6 +233,7 @@ pub fn run(
         toc,
         svg_fonts: None,
         pdfua: doc.pdfua == Some(true),
+        fields: Vec::new(),
     };
     let bookmarks = doc.bookmarks.unwrap_or(true);
     let doc_inh = inherit(&Inherited::default(), doc.default_style.as_ref());
@@ -340,6 +341,7 @@ pub fn run(
             let mut ops: Vec<DrawOp> = Vec::new();
             let mut tags: Vec<Tag> = Vec::new();
             let mut links: Vec<LinkRect> = Vec::new();
+            let mut fields: Vec<FieldRect> = Vec::new();
             if let Some(bg) = s
                 .page
                 .style
@@ -425,6 +427,11 @@ pub fn run(
                         tags.push(tag);
                     }
                     Op::Link(r) => links.push(LinkRect {
+                        x: r.x + ox,
+                        y: r.y + oy,
+                        ..r
+                    }),
+                    Op::Field(r) => fields.push(FieldRect {
                         x: r.x + ox,
                         y: r.y + oy,
                         ..r
@@ -522,6 +529,7 @@ pub fn run(
                 ops,
                 tags,
                 links,
+                fields,
             });
         }
     }
@@ -535,6 +543,7 @@ pub fn run(
         anchors,
         outline,
         structure: structure.elems,
+        fields: cx.fields,
     })
 }
 

@@ -23,4 +23,5 @@ rqrr = "0.9"
 tiny-skia.workspace = true
 serde_json.workspace = true
 turbopdf-layout.workspace = true
+turbopdf-markup.workspace = true
 turbopdf-pdf.workspace = true

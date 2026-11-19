@@ -205,7 +205,7 @@ pub unsafe extern "C" fn turbopdf_push_buffer(ptr: *mut u8, len: usize) {
 // ------------------------------------------------------------------ documents
 
 /// Lay a tree out once. `files`: 1 when the host reads files (it has a baseDir).
-/// Output: `u32 handle | u32 pages | bytes warnings JSON | bytes PDF`.
+/// Output: `u32 handle | u32 pages | bytes warnings JSON | bytes fields JSON | bytes PDF`.
 ///
 /// # Safety
 /// `ptr..ptr+len` must be readable memory of this instance.
@@ -223,6 +223,7 @@ pub unsafe extern "C" fn turbopdf_prepare(ptr: *const u8, len: usize, files: u32
         .map_err(engine_error)?;
         let pdf = prepared.pdf().map_err(engine_error)?;
         let warnings = serde_json::to_string(prepared.warnings()).expect("warnings serialize");
+        let fields = serde_json::to_string(&prepared.fields()).expect("fields serialize");
         let pages = prepared.pages();
         let handle = DOCS.with(|d| {
             let mut docs = d.borrow_mut();
@@ -241,6 +242,7 @@ pub unsafe extern "C" fn turbopdf_prepare(ptr: *const u8, len: usize, files: u32
         out.extend_from_slice(&handle.to_le_bytes());
         out.extend_from_slice(&pages.to_le_bytes());
         put(&mut out, warnings.as_bytes());
+        put(&mut out, fields.as_bytes());
         put(&mut out, &pdf);
         Ok(out)
     })())

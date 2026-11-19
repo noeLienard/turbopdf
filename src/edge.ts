@@ -17,7 +17,7 @@ import type { NativeEngine } from './rust/engine-api';
 export { configure } from './queue';
 export { TurboPdfError } from './errors';
 export type { TurboPdfErrorCode } from './errors';
-export type { PdfA, Watermark } from './tree';
+export type { FieldBox, FieldKind, FormField, PdfA, Watermark } from './tree';
 export type { CreateOptions, EdgePdf, EdgePngPage, EdgePreview, PngOptions, PreviewOptions, PreviewPage, ReactElementLike, ResponseOptions, Warning } from './types';
 
 /** What `init()` accepts: the compiled module, its bytes, a `fetch` response, or a URL to fetch. */
