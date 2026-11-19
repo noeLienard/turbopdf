@@ -13,8 +13,9 @@ window.prepare = async (fontUrl) => {
 window.render = async (html) => {
   const pdf = await create({ html, fonts, title: 'Browser smoke', lang: 'en' });
   const bytes = pdf.toUint8Array();
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-  URL.revokeObjectURL(url);
+  const blob = pdf.toBlob();
+  if (blob.type !== 'application/pdf' || blob.size !== bytes.length) throw new Error('toBlob() does not match the PDF');
+  URL.revokeObjectURL(URL.createObjectURL(blob));
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
   return { base64: btoa(binary), pages: pdf.pages, warnings: pdf.warnings };

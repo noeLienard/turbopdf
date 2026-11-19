@@ -487,7 +487,7 @@ export default {
 ```
 
 `init()` also takes the bytes, a `fetch()` response or a URL (`init(new URL('/turbopdf.wasm', location.href))`
-in a browser). The PDF gives `toUint8Array()`, `toResponse()`, `preview()` and `toPng()` (each page:
+in a browser). The PDF gives `toUint8Array()`, `toBlob()`, `toResponse()`, `preview()` and `toPng()` (each page:
 `toUint8Array()`, `toDataUrl()`); `save()`, `toBuffer()` and `toStream()` are Node-only. There is no file
 system: pass fonts as bytes (`fonts: [{ family, data }]`) and images as `data:` URLs.
 
@@ -527,7 +527,7 @@ export function DownloadInvoice({ html }: { html: string }) {
   async function download() {
     await engine();
     const pdf = await create({ html, title: 'Invoice 42', lang: 'en' });
-    const url = URL.createObjectURL(new Blob([pdf.toUint8Array()], { type: 'application/pdf' }));
+    const url = URL.createObjectURL(pdf.toBlob());
     Object.assign(document.createElement('a'), { href: url, download: 'invoice.pdf' }).click();
     URL.revokeObjectURL(url);
   }

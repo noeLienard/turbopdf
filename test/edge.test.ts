@@ -23,6 +23,9 @@ describe.skipIf(!existsSync(wasmFile))('turbopdf/edge', () => {
     expect(new TextDecoder().decode(pdf.toUint8Array().subarray(0, 5))).toBe('%PDF-');
     expect(pdf.pages).toBeGreaterThan(1);
     expect(pdf.toResponse().headers.get('content-type')).toBe('application/pdf');
+    const blob = pdf.toBlob();
+    expect(blob.type).toBe('application/pdf');
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(pdf.toUint8Array());
     const [page] = await pdf.toPng({ scale: 1 });
     expect(page!.width).toBeGreaterThan(500);
     expect(page!.toDataUrl()).toMatch(/^data:image\/png;base64,/);

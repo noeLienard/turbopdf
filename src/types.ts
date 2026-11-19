@@ -199,6 +199,8 @@ export interface EdgePdf {
   readonly warnings: Warning[];
   /** The PDF bytes. */
   toUint8Array(): Uint8Array;
+  /** The PDF as a `Blob` (`application/pdf`): `URL.createObjectURL(pdf.toBlob())` to download it in a browser. */
+  toBlob(): Blob;
   /** A web-standard `Response` with the right headers. Return it from Next.js, Hono, Bun, Deno… */
   toResponse(options?: ResponseOptions): Response;
   /** The document as HTML/CSS (real text, fonts and links), from the same layout as the PDF. */
