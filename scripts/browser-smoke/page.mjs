@@ -1,5 +1,9 @@
 // Bundled for the browser by run.mjs: the public `turbopdf/edge` API, as an app would use it.
 import { create, init } from '../../dist/edge.js';
+// browser apps build documents with the components too: the bundle must not pull in any Node API
+import { Text } from '../../dist/components.js';
+
+if (typeof Text !== 'function') throw new Error('turbopdf/components did not load');
 
 let fonts;
 
