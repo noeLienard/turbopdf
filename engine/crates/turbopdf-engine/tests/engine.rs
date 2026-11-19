@@ -1091,6 +1091,115 @@ fn pdfua_refuses_characters_no_font_has() {
     }
 }
 
+/// An accessible document with a creation date, for PDF/A.
+fn archival_doc(extra: Value) -> Document {
+    let mut d = accessible_doc(extra);
+    d.meta.as_mut().unwrap().creation_date = Some("2026-11-19T10:00:00Z".into());
+    d
+}
+
+#[test]
+fn pdfa_levels_validate_and_declare_themselves() {
+    for (level, part, conformance) in [
+        ("1b", "1", "B"),
+        ("1a", "1", "A"),
+        ("2b", "2", "B"),
+        ("2u", "2", "U"),
+        ("3b", "3", "B"),
+        ("3a", "3", "A"),
+        ("2a", "2", "A"),
+    ] {
+        let mut d = archival_doc(json!({ "pdfa": level }));
+        if level.starts_with('1') {
+            // PDF/A-1 has no transparency: the test GIFs have an alpha channel
+            let mut v = serde_json::to_value(&d).unwrap();
+            v["children"][0]["children"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|n| n["type"] != "image");
+            d = doc(v);
+        }
+        let out = Engine::new()
+            .render(&d)
+            .unwrap_or_else(|e| panic!("PDF/A-{level}: {e}"));
+        let t = pdf_text(&out.pdf);
+        assert!(
+            t.contains(&format!("<pdfaid:part>{part}</pdfaid:part>")),
+            "PDF/A-{level}: no part"
+        );
+        assert!(
+            t.contains(&format!(
+                "<pdfaid:conformance>{conformance}</pdfaid:conformance>"
+            )),
+            "PDF/A-{level}: no conformance"
+        );
+        assert!(
+            t.contains("/OutputIntents"),
+            "PDF/A-{level}: no output intent"
+        );
+    }
+}
+
+#[test]
+fn pdfa_and_pdfua_together() {
+    let out = Engine::new()
+        .render(&archival_doc(json!({ "pdfa": "3a", "pdfua": true })))
+        .unwrap();
+    let t = pdf_text(&out.pdf);
+    assert!(t.contains("pdfuaid:part") && t.contains("<pdfaid:part>3</pdfaid:part>"));
+}
+
+#[test]
+fn pdfa_needs_a_date_and_the_a_levels_need_tags() {
+    let d = accessible_doc(json!({ "pdfa": "2a", "tagged": false }));
+    let Err(EngineError::Invalid(errors)) = Engine::new().render(&d) else {
+        panic!("expected invalid")
+    };
+    let codes: Vec<&str> = errors.iter().map(|e| e.code).collect();
+    assert_eq!(codes, ["pdfa_date", "pdfa_untagged"]);
+    let d = archival_doc(json!({ "pdfa": "1b", "pdfua": true }));
+    let Err(EngineError::Invalid(errors)) = Engine::new().render(&d) else {
+        panic!("expected invalid")
+    };
+    assert_eq!(errors[0].code, "pdfa_pdfua");
+}
+
+#[test]
+fn pdfa_1_refuses_transparency_and_pdfa_2_accepts_it() {
+    let mut v = serde_json::to_value(archival_doc(json!({ "pdfa": "1b" }))).unwrap();
+    v["children"][0]["children"].as_array_mut().unwrap().push(
+        json!({ "type": "view", "style": { "height": 20, "backgroundColor": "#ff000080" }, "children": [] }),
+    );
+    match Engine::new().render(&doc(v.clone())) {
+        Err(EngineError::Pdf(e)) => assert!(
+            e.to_string().contains("PDF/A-1 forbids transparency"),
+            "{e}"
+        ),
+        other => panic!("expected a PDF/A error, got {other:?}"),
+    }
+    v["pdfa"] = json!("2b");
+    assert!(Engine::new().render(&doc(v)).is_ok());
+}
+
+#[test]
+fn pdfa_refuses_characters_no_font_has() {
+    let mut v = serde_json::to_value(archival_doc(json!({ "pdfa": "2b" }))).unwrap();
+    v["children"][0]["children"]
+        .as_array_mut()
+        .unwrap()
+        .push(text("漢字"));
+    match Engine::new().render(&doc(v)) {
+        Err(EngineError::Pdf(e)) => {
+            let m = e.to_string();
+            assert!(
+                m.contains("not PDF/A-2b conformant") && m.contains("characters in no font: 漢 字"),
+                "{m}"
+            )
+        }
+        other => panic!("expected a PDF/A error, got {other:?}"),
+    }
+}
+
 #[test]
 fn an_absolute_child_may_cover_its_parents_padding() {
     let d = body(

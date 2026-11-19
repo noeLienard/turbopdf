@@ -7,7 +7,7 @@
 use krilla::action::{Action, LinkAction};
 use krilla::annotation::{Annotation, LinkAnnotation, Target};
 use krilla::color::rgb;
-use krilla::configure::{Accessibility, ConfigurationBuilder};
+use krilla::configure::{Accessibility, Archival, ConfigurationBuilder};
 use krilla::destination::{Destination, XyzDestination};
 use krilla::geom::{Path, PathBuilder, Point, Rect, Size, Transform};
 use krilla::image::Image;
@@ -27,7 +27,7 @@ use turbopdf_layout::{
     border_bar,
 };
 use turbopdf_text::{Rgba, Run};
-use turbopdf_tree::{BorderStyle, Meta, ObjectFit};
+use turbopdf_tree::{BorderStyle, Meta, ObjectFit, PdfA};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PdfError {
@@ -40,6 +40,9 @@ pub enum PdfError {
     /// PDF/UA requirements the document does not meet.
     #[error("not PDF/UA conformant: {}", .0.join("; "))]
     Accessibility(Vec<String>),
+    /// PDF/A requirements the document does not meet: (standard, problems).
+    #[error("not {standard} conformant: {problems}", standard = .0, problems = .1.join("; "))]
+    Archival(&'static str, Vec<String>),
 }
 
 /// How the PDF is written.
@@ -49,6 +52,22 @@ pub struct PdfOptions {
     pub tagged: bool,
     /// Validate PDF/UA-1 (implies `tagged`).
     pub pdfua: bool,
+    /// Conform to this PDF/A level (the `a` levels imply `tagged`).
+    pub pdfa: Option<PdfA>,
+}
+
+fn archival(a: PdfA) -> Archival {
+    match a {
+        PdfA::A1b => Archival::A1_B,
+        PdfA::A1a => Archival::A1_A,
+        PdfA::A2b => Archival::A2_B,
+        PdfA::A2u => Archival::A2_U,
+        PdfA::A2a => Archival::A2_A,
+        PdfA::A3b => Archival::A3_B,
+        PdfA::A3u => Archival::A3_U,
+        PdfA::A3a => Archival::A3_A,
+        PdfA::A4 => Archival::A4,
+    }
 }
 
 /// Same marked-content sequence: artifacts of one kind, or content of one structure element.
@@ -174,11 +193,32 @@ fn explain(e: &krilla::configure::ValidationError) -> String {
         V::MissingDocumentOutline => {
             "the document has no bookmarks: keep `bookmarks` on and add headings".into()
         }
+        V::MissingDocumentDate => "the document has no creation date (meta.creationDate)".into(),
+        V::Transparency(_) => {
+            "PDF/A-1 forbids transparency (opacity, rgba colors, watermarks): use PDF/A-2 or later"
+                .into()
+        }
+        V::RestrictedLicense(_) => "a font's license forbids embedding it: use another font".into(),
+        V::EmbeddedPDF(_) => "an embedded PDF is not allowed at this PDF/A level".into(),
+        V::ImageInterpolation(_) => "an image asks for interpolation (SVG image-rendering)".into(),
         V::NoCodepointMapping(..) | V::InvalidCodepointMapping(..) | V::UnicodePrivateArea(..) => {
             "a glyph has no Unicode meaning (icon fonts, private-use characters)".into()
         }
         other => format!("{other:?}"),
     }
+}
+
+/// A problem only PDF/UA reports (not PDF/A).
+fn ua_only(m: &str) -> bool {
+    [
+        "no language",
+        "no title",
+        "alt text",
+        "heading has no text",
+        "no bookmarks",
+    ]
+    .iter()
+    .any(|k| m.contains(k))
 }
 
 fn fill_of(c: Rgba) -> Fill {
@@ -546,14 +586,20 @@ pub fn write(
     meta: Option<&Meta>,
     opts: PdfOptions,
 ) -> Result<Vec<u8>, PdfError> {
-    let tag_on = opts.tagged || opts.pdfua;
+    let tag_on = opts.tagged || opts.pdfua || opts.pdfa.is_some_and(PdfA::needs_tagging);
     let mut settings = krilla::SerializeSettings {
         enable_tagging: tag_on,
         ..Default::default()
     };
-    if opts.pdfua {
-        settings.configuration = ConfigurationBuilder::new()
-            .with_accessibility_validator(Accessibility::UA1)
+    if opts.pdfua || opts.pdfa.is_some() {
+        let mut c = ConfigurationBuilder::new();
+        if opts.pdfua {
+            c = c.with_accessibility_validator(Accessibility::UA1);
+        }
+        if let Some(a) = opts.pdfa {
+            c = c.with_archival_validator(archival(a));
+        }
+        settings.configuration = c
             .finish()
             .map_err(|e| PdfError::Serialize(format!("{e:?}")))?;
     }
@@ -741,11 +787,13 @@ pub fn write(
                         (None, Some(i)) => Some(i.clone()),
                         (None, None) => {
                             let d = Data::from(data.bytes.clone());
+                            // smooth scaling, except in PDF/A, which forbids asking viewers to interpolate
+                            let smooth = opts.pdfa.is_none();
                             let i = match data.kind {
-                                ImageKind::Png => Image::from_png(d, true),
-                                ImageKind::Jpeg => Image::from_jpeg(d, true),
-                                ImageKind::Webp => Image::from_webp(d, true),
-                                ImageKind::Gif => Image::from_gif(d, true),
+                                ImageKind::Png => Image::from_png(d, smooth),
+                                ImageKind::Jpeg => Image::from_jpeg(d, smooth),
+                                ImageKind::Webp => Image::from_webp(d, smooth),
+                                ImageKind::Gif => Image::from_gif(d, smooth),
                                 ImageKind::Svg => unreachable!("SVGs are drawn as vectors"),
                             }
                             .map_err(PdfError::Image)?;
@@ -856,7 +904,14 @@ pub fn write(
                     ),
                 );
             }
-            PdfError::Accessibility(msgs)
+            match opts.pdfa {
+                // the problems of a PDF/UA + PDF/A document are reported as accessibility ones when only
+                // PDF/UA asks for them (alt texts, title, outline)
+                Some(a) if !opts.pdfua || !msgs.iter().all(|m| ua_only(m)) => {
+                    PdfError::Archival(a.name(), msgs)
+                }
+                _ => PdfError::Accessibility(msgs),
+            }
         }
         other => PdfError::Serialize(format!("{other:?}")),
     })

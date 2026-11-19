@@ -25,6 +25,52 @@ pub enum DocumentTag {
     Document,
 }
 
+/// A PDF/A conformance level: part (1 to 4) and level (`b` basic, `u` Unicode text, `a` accessible).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "tree.ts"))]
+pub enum PdfA {
+    #[serde(rename = "1b")]
+    A1b,
+    #[serde(rename = "1a")]
+    A1a,
+    #[serde(rename = "2b")]
+    A2b,
+    #[serde(rename = "2u")]
+    A2u,
+    #[serde(rename = "2a")]
+    A2a,
+    #[serde(rename = "3b")]
+    A3b,
+    #[serde(rename = "3u")]
+    A3u,
+    #[serde(rename = "3a")]
+    A3a,
+    #[serde(rename = "4")]
+    A4,
+}
+
+impl PdfA {
+    /// The `a` levels: the PDF must be tagged.
+    pub fn needs_tagging(self) -> bool {
+        matches!(self, Self::A1a | Self::A2a | Self::A3a)
+    }
+
+    /// As written: `"PDF/A-3b"`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::A1b => "PDF/A-1b",
+            Self::A1a => "PDF/A-1a",
+            Self::A2b => "PDF/A-2b",
+            Self::A2u => "PDF/A-2u",
+            Self::A2a => "PDF/A-2a",
+            Self::A3b => "PDF/A-3b",
+            Self::A3u => "PDF/A-3u",
+            Self::A3a => "PDF/A-3a",
+            Self::A4 => "PDF/A-4",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "tree.ts"))]
 pub enum PageTag {
@@ -66,6 +112,11 @@ pub struct Document {
     /// `alt` become decorative (with a `missing_alt` warning), a missing glyph is an error. Default `false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pdfua: Option<bool>,
+    /// Conform to a PDF/A level (ISO 19005, long-term archiving): fonts and colors fully embedded, nothing
+    /// external, an sRGB output intent, XMP metadata. Needs `meta.creationDate`; the `a` levels need tagging.
+    /// PDF/A-1 forbids transparency (opacity, watermarks). Default: none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pdfa: Option<PdfA>,
     /// At least one page.
     pub children: Vec<Page>,
 }

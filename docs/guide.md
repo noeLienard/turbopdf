@@ -279,6 +279,29 @@ It also requires every image to have an `alt` (otherwise the image is made decor
 warning) and every character to be in a font: if not, `create()` throws `not_accessible` with the list of
 problems in `error.details`. `tagged: false` turns tagging off (a 200-row invoice: 61 KB instead of 190 KB).
 
+### PDF/A: archiving
+
+PDF/A (ISO 19005) is the PDF made to be read identically in decades: what accounting, banks, courts and public
+records keep. Invoices, payslips and contracts often have to be archived in it.
+
+```ts
+const pdf = await turbopdf.create({ html: invoice, pdfa: '3b' });
+```
+
+| Level | For |
+|---|---|
+| `'2b'`, `'3b'` | most documents. `'3b'` also allows attachments: it is the base of Factur-X / ZUGFeRD |
+| `'2u'`, `'3u'` | the same, with text that is always extractable (search, copy) |
+| `'2a'`, `'3a'` | the same, tagged and accessible; combine with `pdfua: true` for PDF/UA too |
+| `'1b'`, `'1a'` | old archives that ask for PDF/A-1: no transparency (rgba colors, opacity, watermarks, images with alpha) |
+| `'4'` | PDF/A-4 (PDF 2.0) |
+
+TurboPDF embeds every font and color profile and writes the XMP metadata and the sRGB output intent itself.
+PDF/A needs a creation date: `<Document creationDate>` or the tree's `meta.creationDate`, otherwise the time of
+the render (give one to get the same bytes on every run). What the level forbids throws `not_pdfa`, with the
+problems in `details` (e.g. a character no font has, transparency in PDF/A-1). The CI validates every level with
+[veraPDF](https://verapdf.org), the reference validator.
+
 ## Download
 
 ```ts

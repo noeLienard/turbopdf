@@ -70,6 +70,12 @@ tagged?: boolean,
  */
 pdfua?: boolean, 
 /**
+ * Conform to a PDF/A level (ISO 19005, long-term archiving): fonts and colors fully embedded, nothing
+ * external, an sRGB output intent, XMP metadata. Needs `meta.creationDate`; the `a` levels need tagging.
+ * PDF/A-1 forbids transparency (opacity, watermarks). Default: none.
+ */
+pdfa?: PdfA, 
+/**
  * At least one page.
  */
 children: Array<Page>, };
@@ -220,6 +226,11 @@ target?: string, };
 export type PageSize = PageFormat | { width: number, height: number, };
 
 export type PageTag = "page";
+
+/**
+ * A PDF/A conformance level: part (1 to 4) and level (`b` basic, `u` Unicode text, `a` accessible).
+ */
+export type PdfA = "1b" | "1a" | "2b" | "2u" | "2a" | "3b" | "3u" | "3a" | "4";
 
 export type Position = "relative" | "absolute";
 

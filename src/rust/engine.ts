@@ -3,7 +3,7 @@ import type { HtmlFromEngine } from '../preview-types';
 import { TurboPdfError } from '../errors';
 import { FORMATS, normalizeMargin, toPx } from '../formats';
 import { holdSlotUntil } from '../queue';
-import type { Document, Edges, FontFace, Node, Page, PageSize, Warning as TreeWarning, Watermark } from '../tree';
+import type { Document, Edges, FontFace, Node, Page, PageSize, PdfA, Warning as TreeWarning, Watermark } from '../tree';
 import type { CreateOptions, Format, ReactElementLike, Warning } from '../types';
 import { markdownToNodes } from './markdown';
 import { toBase64 } from '../bytes';
@@ -12,6 +12,7 @@ import { defaultBaseDir, engine, reactRenderer } from './provider';
 import { fetchRemoteImages } from './remote';
 
 const invalid = (message: string) => new TurboPdfError('invalid_source', message);
+const PDFA: PdfA[] = ['1b', '1a', '2b', '2u', '2a', '3b', '3u', '3a', '4'];
 
 /** True for objects that look like a React element. */
 export function isReactElement(value: unknown): value is ReactElementLike {
@@ -181,7 +182,7 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
     if (o[k] !== undefined && typeof o[k] !== 'boolean') throw invalid(`\`${k}\` must be true or false.`);
   }
   // `<Document bookmarks>` is a document setting, not metadata
-  const { bookmarks: docBookmarks, tagged: docTagged, pdfua: docPdfua, ...meta } = (parts.meta ?? {}) as Record<string, unknown>;
+  const { bookmarks: docBookmarks, tagged: docTagged, pdfua: docPdfua, pdfa: docPdfa, ...meta } = (parts.meta ?? {}) as Record<string, unknown>;
   for (const k of ['title', 'lang'] as const) {
     if (o[k] !== undefined && (typeof o[k] !== 'string' || !o[k].trim())) throw invalid(`\`${k}\` must be a non-empty string.`);
     if (o[k] !== undefined) meta[k] = o[k];
@@ -199,6 +200,14 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
     const missing = [!meta.title && 'a title (<title>, or <Document title>)', !meta.lang && 'a language (<html lang="fr">, or <Document lang>)'].filter(Boolean);
     if (missing.length) throw invalid(`\`pdfua: true\` needs ${missing.join(' and ')}.`);
   }
+  const pdfa = o.pdfa ?? (docPdfa as PdfA | undefined);
+  if (pdfa !== undefined) {
+    if (!PDFA.includes(pdfa)) throw invalid(`\`pdfa\` must be one of ${PDFA.map((l) => `'${l}'`).join(', ')}.`);
+    if (pdfa.endsWith('a') && tagged === false) throw invalid(`\`pdfa: '${pdfa}'\` is a tagged level: remove \`tagged: false\`.`);
+    if (pdfa.startsWith('1') && pdfua) throw invalid('PDF/A-1 cannot be combined with `pdfua`: use `pdfa: \'2a\'` or later.');
+    // PDF/A requires a date: now, unless the document gives one (then the bytes are the same on every run)
+    meta.creationDate ??= new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  }
   const doc: Document = {
     type: 'document',
     version: 1,
@@ -206,6 +215,7 @@ export async function toTree(o: CreateOptions, warnings: Warning[] = [], buffers
     ...(bookmarks === false ? { bookmarks: false } : {}),
     ...(tagged === false ? { tagged: false } : {}),
     ...(pdfua ? { pdfua: true } : {}),
+    ...(pdfa ? { pdfa } : {}),
     children: (parts.pages.length ? parts.pages : [{ props: {}, children: [] }]).map(
       (p): Page => ({
         type: 'page',

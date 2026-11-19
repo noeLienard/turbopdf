@@ -17,6 +17,7 @@ fn main() {
                 turbopdf_pdf::PdfOptions {
                     tagged: true,
                     pdfua: false,
+                    pdfa: None,
                 },
             )
             .unwrap(),
