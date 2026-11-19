@@ -487,7 +487,7 @@ export default {
 ```
 
 `init()` also takes the bytes, a `fetch()` response or a URL (`init(new URL('/turbopdf.wasm', location.href))`
-in a browser). The PDF gives `toUint8Array()`, `toResponse()`, `preview()` and `toPng()` (each page:
+in a browser). The PDF gives `toUint8Array()`, `toBlob()`, `toResponse()`, `preview()` and `toPng()` (each page:
 `toUint8Array()`, `toDataUrl()`); `save()`, `toBuffer()` and `toStream()` are Node-only. There is no file
 system: pass fonts as bytes (`fonts: [{ family, data }]`) and images as `data:` URLs.
 
@@ -503,6 +503,46 @@ const pdf = await create(<Invoice />);
 The engine is 4.3 MB gzipped: it fits Cloudflare Workers on the paid plan (10 MB) and Deno Deploy / Netlify
 Edge, but not the Cloudflare free plan (3 MB) or Vercel Edge Functions; on Vercel, use the Node.js runtime
 (native engine). Renders run on the calling thread, so `timeout` cannot interrupt one in progress.
+
+### In the browser: the data never leaves the device
+
+The same `turbopdf/edge` runs in a web page: the PDF is made on the user's device, so invoices, payslips or
+medical records are never sent to a server or a third party. The page downloads the engine once (4.3 MB
+gzipped, cached by the browser); rendering then sends no request at all. The CI checks this in Chromium, and
+that the bytes are identical to the native engine's.
+
+```bash
+# serve the engine as a static file (Next.js: public/)
+cp node_modules/turbopdf/wasm/turbopdf.wasm public/turbopdf.wasm
+```
+
+```tsx
+'use client';
+import { create, init } from 'turbopdf/edge';
+
+let ready: Promise<void> | undefined;
+const engine = () => (ready ??= init('/turbopdf.wasm')); // once per page
+
+export function DownloadInvoice({ html }: { html: string }) {
+  async function download() {
+    await engine();
+    const pdf = await create({ html, title: 'Invoice 42', lang: 'en' });
+    const url = URL.createObjectURL(pdf.toBlob());
+    Object.assign(document.createElement('a'), { href: url, download: 'invoice.pdf' }).click();
+    URL.revokeObjectURL(url);
+  }
+  // hovering the button loads the engine, so the click is instant
+  return <button onMouseEnter={() => void engine()} onClick={download}>Download PDF</button>;
+}
+```
+
+- Build the HTML (or the React element, with `init(wasm, { renderToStaticMarkup })`) in the browser from data
+  the page already has: if the server builds it, the data went through the server anyway.
+- Fonts: `fonts: [{ family, data: new Uint8Array(await (await fetch('/brand.woff2')).arrayBuffer()) }]`.
+  Images: `data:` URLs, or bytes fetched from your own site before `create()`.
+- Rendering runs on the page's thread: a few ms for an invoice. For documents of hundreds of pages, call
+  `create()` from a Web Worker so the page stays responsive.
+- Check it yourself: in the browser's Network tab, clicking the button sends nothing.
 
 ## Security
 

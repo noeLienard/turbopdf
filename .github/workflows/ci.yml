@@ -26,4 +26,6 @@ jobs:
       - run: npm run check
       - name: Tests on the WebAssembly engine (the fallback where no native binary exists)
         run: npm run test:wasm
+      - name: In a real browser (Chromium), offline and byte-identical to the native engine
+        run: node scripts/browser-smoke/run.mjs
       - run: npm pack --dry-run

@@ -36,6 +36,8 @@ export interface Core {
   convertHtml(html: string, options?: { baseDir?: string; css?: string; header?: string; footer?: string }): { parts: string; buffers: Uint8Array[] };
   htmlNodes(html: string): string;
   version(): string;
+  /** Pending while the instance is created asynchronously (browsers, see `start`); await it before calling. */
+  ready(): Promise<void> | undefined;
 }
 
 const encoder = new TextEncoder();
@@ -73,14 +75,36 @@ export function core(module: WebAssembly.Module, files?: Files): Core {
       },
     },
   };
-  const start = () => {
-    x = new WebAssembly.Instance(module, imports).exports as unknown as Exports;
+  /** Set while a new instance is being created asynchronously. */
+  let pending: Promise<void> | undefined;
+  const adopt = (instance: WebAssembly.Instance) => {
+    x = instance.exports as unknown as Exports;
     generation++;
+  };
+  const start = () => {
+    try {
+      adopt(new WebAssembly.Instance(module, imports));
+    } catch (e) {
+      // browsers refuse to instantiate a module over 8 MB synchronously on the main thread (a RangeError):
+      // create it asynchronously, and calls wait for it (`ready`)
+      if (!(e instanceof RangeError)) throw e;
+      pending = WebAssembly.instantiate(module, imports).then(
+        (instance) => {
+          adopt(instance);
+          pending = undefined;
+        },
+        (cause: unknown) => {
+          pending = undefined;
+          throw cause;
+        },
+      );
+    }
   };
   start();
 
   /** Copy `data` in, run `call`, free, return the output (or throw the engine's error). */
   function run(data: Uint8Array | undefined, call: (ptr: number, len: number) => number): Uint8Array {
+    if (pending) throw fail('render_failed', 'the engine is still starting: try again');
     // even empty input gets a real (non-null) pointer: Rust slices may not start at 0
     const len = data ? data.length : 0;
     const ptr = data ? x.turbopdf_alloc(len) : 0;
@@ -134,6 +158,7 @@ export function core(module: WebAssembly.Module, files?: Files): Core {
   };
 
   return {
+    ready: () => pending,
     render(tree, options = {}) {
       return within(options.baseDir, () => {
         for (const b of options.buffers ?? []) {
@@ -183,6 +208,7 @@ export function inThread(c: Core): import('./engine-api').NativeEngine {
   const released = typeof FinalizationRegistry === 'undefined' ? undefined : new FinalizationRegistry<Handle>((h) => c.release(h));
   return {
     async render(tree, options) {
+      await c.ready();
       const r = c.render(tree, options);
       let pdf: Uint8Array | undefined = r.pdf;
       const doc = {
@@ -194,13 +220,13 @@ export function inThread(c: Core): import('./engine-api').NativeEngine {
           pdf = undefined;
           return out;
         },
-        png: async (scale = 2) => c.png(r.handle, scale),
-        html: async () => c.html(r.handle),
+        png: async (scale = 2) => (await c.ready(), c.png(r.handle, scale)),
+        html: async () => (await c.ready(), c.html(r.handle)),
       };
       released?.register(doc, r.handle);
       return doc;
     },
-    convertHtml: async (html, options) => c.convertHtml(html, options),
+    convertHtml: async (html, options) => (await c.ready(), c.convertHtml(html, options)),
     htmlNodes: (html) => c.htmlNodes(html),
     version: () => c.version(),
   };

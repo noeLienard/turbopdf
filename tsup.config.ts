@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig([
   {
-    entry: { index: 'src/index.ts', components: 'src/components.ts', tree: 'src/tree.ts' },
+    entry: { index: 'src/index.ts' },
     format: ['esm', 'cjs'],
     dts: true,
     clean: true,
@@ -14,6 +14,15 @@ export default defineConfig([
       o.define = { ...o.define, __TURBOPDF_CJS__: String(format === 'cjs') };
     },
     footer: ({ format }) => (format === 'cjs' ? { js: 'if (module.exports.default) module.exports = Object.assign(module.exports.default, module.exports);' } : {}),
+  },
+  {
+    // components and tree types are imported by browser code too (client components): no Node shims here
+    entry: { components: 'src/components.ts', tree: 'src/tree.ts' },
+    format: ['esm', 'cjs'],
+    dts: true,
+    platform: 'neutral',
+    target: 'es2022',
+    external: ['react'],
   },
   {
     // edge runtimes and browsers: no Node API in this bundle

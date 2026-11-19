@@ -138,6 +138,11 @@ export class EdgePdfImpl<Png extends EdgePngPage = EdgePngPage, Html extends Edg
     return this.bytes;
   }
 
+  toBlob(): Blob {
+    // the engine's bytes always live in an ArrayBuffer, never a SharedArrayBuffer
+    return new Blob([this.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
+  }
+
   toResponse(options: ResponseOptions = {}): Response {
     const filename = options.filename ?? 'document.pdf';
     const ascii = filename.replace(/[^\x20-\x7e]|["\\]/g, '_');
