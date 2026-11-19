@@ -5,7 +5,7 @@
 //   node scripts/browser-smoke/run.mjs
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -40,11 +40,18 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 // Playwright, installed apart: adding it to package.json makes npm rewrite the lockfile (npm/cli#4828)
 const tools = mkdtempSync(join(tmpdir(), 'turbopdf-playwright-'));
 const sh = { stdio: 'inherit', shell: process.platform === 'win32' };
-execFileSync('npm', ['install', '--prefix', tools, '--no-save', '--no-audit', '--no-fund', '--silent', 'playwright@1.58.2'], sh);
-execFileSync(join(tools, 'node_modules', '.bin', 'playwright'), ['install', ...(process.platform === 'linux' ? ['--with-deps'] : []), 'chromium'], sh);
-const { chromium } = await import(pathToFileURL(join(tools, 'node_modules', 'playwright', 'index.mjs')).href);
-
-const browser = await chromium.launch();
+execFileSync('npm', ['install', '--prefix', tools, '--no-save', '--no-audit', '--no-fund', '--silent', 'playwright-core@1.58.2'], sh);
+const { chromium } = await import(pathToFileURL(join(tools, 'node_modules', 'playwright-core', 'index.mjs')).href);
+// a Chrome already on the machine (GitHub runners have one); otherwise Playwright's own Chromium
+const installed = [
+  process.env.CHROME_PATH,
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+].find((p) => p && existsSync(p));
+if (!installed) execFileSync(join(tools, 'node_modules', '.bin', 'playwright-core'), ['install', 'chromium'], sh);
+const browser = await chromium.launch(installed ? { executablePath: installed } : {});
+console.log(`browser: ${installed ?? 'Playwright Chromium'} ${browser.version()}`);
 try {
   const page = await browser.newPage();
   page.on('pageerror', (e) => console.error('page error:', e));
@@ -65,7 +72,7 @@ try {
   const nativePdf = (await turbopdf.create({ html, fonts: [{ family: 'Script', data: readFileSync(font) }], title: 'Browser smoke', lang: 'en' })).toBuffer();
 
   const sha = (b) => createHash('sha256').update(b).digest('hex').slice(0, 16);
-  console.log(`browser: ${got.pages} page(s), ${browserPdf.length} bytes in ${ms} ms, sha ${sha(browserPdf)}; native: sha ${sha(nativePdf)}`);
+  console.log(`rendered: ${got.pages} page(s), ${browserPdf.length} bytes in ${ms} ms, sha ${sha(browserPdf)}; native: sha ${sha(nativePdf)}`);
   console.log(`requests while rendering: ${requests.length ? requests.join(', ') : 'none'}`);
   const problems = [
     browserPdf.subarray(0, 5).toString() !== '%PDF-' && 'not a PDF',
