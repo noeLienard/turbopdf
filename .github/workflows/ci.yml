@@ -28,7 +28,7 @@ jobs:
         run: npm run test:wasm
       - name: In a real browser (Chromium), offline and byte-identical to the native engine
         run: node scripts/browser-smoke/run.mjs
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
