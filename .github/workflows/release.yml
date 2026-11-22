@@ -45,7 +45,7 @@ jobs:
       - name: Collect the engine
         shell: bash
         run: mkdir -p artifacts/${{ matrix.target }} && cp native/turbopdf.*.node artifacts/${{ matrix.target }}/turbopdf.node
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: engine-${{ matrix.target }}
           path: artifacts/${{ matrix.target }}/turbopdf.node
@@ -68,7 +68,7 @@ jobs:
       # a Node addon on musl must link the C runtime dynamically, like Node itself
       - run: RUSTFLAGS="-C target-feature=-crt-static" npm run build:native
       - run: mkdir -p artifacts/linux-x64-musl && cp native/turbopdf.*.node artifacts/linux-x64-musl/turbopdf.node
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: engine-linux-x64-musl
           path: artifacts/linux-x64-musl/turbopdf.node
@@ -85,7 +85,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run build:wasm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: engine-wasm
           path: wasm/turbopdf.wasm
@@ -116,7 +116,7 @@ jobs:
           npm pack --pack-destination packed
           for d in npm/*/; do npm pack "./$d" --pack-destination packed; done
           ls -la packed
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: packed
           path: packed
